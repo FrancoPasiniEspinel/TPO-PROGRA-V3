@@ -1,6 +1,7 @@
 package clases;
 
 import java.util.List;
+import java.util.Map;
 
 public class DatosCorrelaciones {
 
@@ -15,6 +16,7 @@ public class DatosCorrelaciones {
     public List<String> getNombresActivos() {
         return nombresActivos;
     }
+
 
     public void setNombresActivos(List<String> nombresActivos) {
         this.nombresActivos = nombresActivos;
@@ -35,4 +37,7 @@ public class DatosCorrelaciones {
                 ", matrizCorrelaciones=" + matrizCorrelaciones +
                 '}';
     }
+
+
+
 }

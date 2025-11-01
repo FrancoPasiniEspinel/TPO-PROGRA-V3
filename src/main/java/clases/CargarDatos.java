@@ -1,64 +1,53 @@
 package clases;
 
-import Interfaces.ICargarDatos;
-
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public  class CargarDatos implements ICargarDatos {
+public  class CargarDatos {
 
 
     //chequear si este metodo esta bien
 
-    public static List<Activo> leerArchivoActivos(String ruta) throws FileNotFoundException {
-        var elArchivo = new File(ruta);
+    public static List<Activo> leerArchivoActivos(String ruta) throws IOException {
         List<Activo> listaActivos = new ArrayList<>();
-        try {
-            var entrada = new BufferedReader(new FileReader(elArchivo));
+        try (BufferedReader entrada = new BufferedReader(new FileReader(ruta))){
             entrada.readLine();
-            String  linea = entrada.readLine();
-            while (linea != null){
-                String[] atributos= linea.split(",");
-                List<Double> porcentajes = new ArrayList<>();
-                completarAtributos(atributos, porcentajes, listaActivos);
-                linea = entrada.readLine();
+            String linea;
+            while ((linea = entrada.readLine()) != null) {
+                String[] atributos = linea.split(",");
+                Activo activo = completarAtributos(atributos);
+                listaActivos.add(activo);
             }
-            entrada.close();
-        }catch ( FileNotFoundException e) {
-            throw new FileNotFoundException();
-
-        } catch (Exception e) {
-            throw new RuntimeException(e);
 
         }
-        return listaActivos;
 
+        return listaActivos;
     }
 
-
-    public static List<Activo> completarAtributos(String[] atributos, List<Double> porcentajes, List<Activo> listaActivos ) {
+    public static Activo completarAtributos(String[] atributos) {
         String nombre= atributos[0];
-        double retornoEsperado = Double.parseDouble(atributos[1]);
+        double retornoEsperado = Double.parseDouble(atributos[1].replace(',', '.'));
         double riesgo = Double.parseDouble(atributos[2]);
         double montoMinimo = Double.parseDouble(atributos[3]);
         String tipo=atributos[4];
         String sector=atributos[5];
+        List<Double> porcentajes = new ArrayList<>();
         for (int i = 6; i < atributos.length; i++) {
             double porcentaje = Double.parseDouble(atributos[i]);
             porcentajes.add(porcentaje);
 
         }
 
-        Activo nuevo_activo= new Activo(nombre, retornoEsperado, riesgo, montoMinimo, tipo, sector, porcentajes);
-        listaActivos.add(nuevo_activo);
-        return listaActivos;//preguntar si hay que cargar todos los archivos en memoria
+         return new Activo(nombre, retornoEsperado, riesgo, montoMinimo, tipo, sector, porcentajes);
+
+        //preguntar si hay que cargar todos los archivos en memoria
     }
 
     public static DatosCorrelaciones leerArchivoCorrelaciones(String ruta) throws IOException {
         var elArchivo = new File(ruta);
         List<String> nombresActivos = new ArrayList<>();
-        List<List<Double>> matrizCorrelaciones = new  ArrayList<>();
+        List<List<Double>> matrizCorrelaciones = new ArrayList<>();
 
         try (BufferedReader br = new BufferedReader(new FileReader(elArchivo))) {
             String linea;
@@ -83,17 +72,12 @@ public  class CargarDatos implements ICargarDatos {
                     filaNumerica.add(Double.parseDouble(valores[i].replace(',', '.')));
                 }
                 matrizCorrelaciones.add(filaNumerica);
-                DatosCorrelaciones datosCo= new DatosCorrelaciones(nombresActivos, matrizCorrelaciones);
             }
-        }catch (FileNotFoundException e) {
-            throw new FileNotFoundException();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        DatosCorrelaciones datosCo= new DatosCorrelaciones(nombresActivos, matrizCorrelaciones);
-        return datosCo;
+
+
+        }return new DatosCorrelaciones(nombresActivos, matrizCorrelaciones);
     }
-}
+    }
 
 
 

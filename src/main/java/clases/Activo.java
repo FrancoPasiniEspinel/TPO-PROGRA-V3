@@ -96,22 +96,14 @@ public class Activo {
                 '}';
     }
 
+
+
     //Metodos
     /*public void agregarRendimiento(double rendimiento) {
         historial.add(rendimiento);
     }*/
 
-    public static double calcularRiesgoTotal(double[][] matrizCorrelacion, List<Activo> activosVivos) {
-        double riesgoTotal = 0.0;
-        for (int i = 0; i < activosVivos.size(); i++) {
-            riesgoTotal+=activosVivos.get(i).getRiesgo();
-            for (int j = 0; j<activosVivos.size(); j++) {
-                riesgoTotal+=matrizCorrelacion[i][j];
-            }
 
-        }
-        return riesgoTotal;
-    }
 
 
 

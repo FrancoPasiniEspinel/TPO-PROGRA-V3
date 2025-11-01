@@ -1,19 +1,15 @@
-import clases.CargarDatos;
-import clases.PerfilRiesgo;
-import clases.Cliente;
+import clases.*;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Scanner;
-import java.util.InputMismatchException;
+import java.util.*;
 
 public class Main {
     public static void main(String[] args) {
         try {
             String ruta = "C:/Users/franc/Desktop/PROGRA 3/CSV/activos_financieros_60.csv";
-            System.out.println(CargarDatos.leerArchivoActivos(ruta));
+            List<Activo> todosLosActivos= CargarDatos.leerArchivoActivos(ruta);
             String ruta2 = "C:/Users/franc/Desktop/correlaciones_60 (1).csv";
+            DatosCorrelaciones correlaciones= CargarDatos.leerArchivoCorrelaciones(ruta2);
             System.out.println(CargarDatos.leerArchivoCorrelaciones(ruta2));
         } catch (IOException e) {
             System.out.println("Error al leer los archivos de datos: " + e.getMessage());
@@ -109,9 +105,8 @@ public class Main {
         }
 
         Cliente cliente = new Cliente(nombre, montoMaximo, plazoInversion, perfilSeleccionado, preferenciasSector, preferenciasTipoActivo);
-
         System.out.println("\nCliente creado exitosamente:");
-        System.out.println(cliente);
+
 
         teclado.close();
     }

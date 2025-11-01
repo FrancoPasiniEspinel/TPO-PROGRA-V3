@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.Comparator;
 
 public class OptimizacionPortafolio {
 
@@ -60,8 +61,8 @@ public class OptimizacionPortafolio {
         this.PRESUPUESTO_MAX = cliente.getMontoMaximo();
         this.RIESGO_MAX = cliente.getPerfil().getRiesgoMaximo();
 
-        // Usamos el retorno más alto entre el deseado y el del perfil
-        //this.RETORNO_MIN = Math.max(cliente.getRetornoMinimoDeseado(), cliente.getPerfil().getRetornoMinimo()); comentado
+        // Usamos el retorno del perfil
+        this.RETORNO_MIN = cliente.getPerfil().getRetornoMinimo();
 
         // 3b. Calcular límites absolutos de diversificación (en dólares)
         this.maxUSD_porSector = new HashMap<>();
@@ -151,11 +152,12 @@ public class OptimizacionPortafolio {
      * Calcula el costo total de un portafolio.
      * Corresponde a 'func costo_total(S)'
      */
-    private double calcularCostoTotal(List<Activo> portafolio) {
+    private static double calcularCostoTotal(List<Activo> portafolio) {
         double costo = 0.0;
         for (Activo a : portafolio) {
-            costo += a.getMontoMinimo(); // Asumo que el costo es el monto mínimo
+            costo+= a.getMontoMinimo();
         }
+
         return costo;
     }
 
@@ -163,10 +165,12 @@ public class OptimizacionPortafolio {
      * Calcula el retorno total de un portafolio.
      * Corresponde a 'func retorno_total(S)'
      */
-    private double calcularRetornoTotal(List<Activo> portafolio) {
+    public double calcularRetornoTotal(List<Activo> portafolio) {
         double retorno = 0.0;
-        for (Activo a : portafolio) {
-            retorno += a.getRetornoEsperado();
+        double montoTotal= calcularCostoTotal(portafolio);
+        for(Activo a : portafolio) {
+            double participacion=a.getMontoMinimo()/montoTotal;
+            retorno+=participacion*a.getRetornoEsperado();
         }
         return retorno;
     }
@@ -174,29 +178,67 @@ public class OptimizacionPortafolio {
     /**
      * Calcula el riesgo total de un portafolio.
      * Corresponde a 'func riesgo_total(S)'
-     * riesgoTotal(S) = Σ riesgo[i] + Σ riesgoPar(i,j)
+         * riesgoTotal(S) = Σ riesgo[i] + Σ riesgoPar(i,j)
      */
     // <<< ESTE MÉTODO FALTABA EN TU COPIA >>>
-    private double calcularRiesgoTotal(List<Activo> portafolio) {
-        double riesgo = 0.0;
 
-        // 1. Sumar los riesgos individuales (Σ riesgo[i])
-        for (Activo a : portafolio) {
-            riesgo += a.getRiesgo();
+
+    public static double calcularRiesgoTotal(
+            double[][] matrizCorrelacion,
+            List<Activo> activosVivos,
+            List<String> nombresOrdenados,
+            Map<String, Activo> datosActivos
+    ) {
+        // Paso 1: contar cuántas veces aparece cada activo
+        Map<String, Integer> cantidades = new HashMap<>();
+        double montoTotal = 0.0;
+
+        for (Activo a : activosVivos) {
+            String nombre = a.getNombre();
+            double monto = a.getMontoMinimo();
+            cantidades.put(nombre, cantidades.getOrDefault(nombre, 0) + 1);
+            montoTotal += monto;
         }
 
-        // 2. Sumar el riesgo de pares (Σ riesgoPar(i,j))
-        // Iteramos sobre cada par único (i < j)
-        for (int i = 0; i < portafolio.size(); i++) {
-            for (int j = i + 1; j < portafolio.size(); j++) {
-                Activo a1 = portafolio.get(i);
-                Activo a2 = portafolio.get(j);
-                // Usamos un helper para buscar el valor en la matriz
-                riesgo += getCorrelacionEntre(a1.getNombre(), a2.getNombre());
+        // Paso 2: calcular participación de cada activo
+        Map<String, Double> participaciones = new HashMap<>();
+        for (String nombre : cantidades.keySet()) {
+            double montoActivo = datosActivos.get(nombre).getMontoMinimo() * cantidades.get(nombre);
+            double participacion = montoActivo / montoTotal;
+            participaciones.put(nombre, participacion);
+        }
+
+        // Paso 3: riesgo individual ponderado por participación
+        double riesgoTotal = 0.0;
+        for (String nombre : participaciones.keySet()) {
+            double riesgo = datosActivos.get(nombre).getRiesgo();
+            double participacion = participaciones.get(nombre);
+            riesgoTotal += riesgo * participacion;
+        }
+
+        // Paso 4: riesgo conjunto ponderado por participación y correlación
+        for (int i = 0; i < nombresOrdenados.size(); i++) {
+            String ni = nombresOrdenados.get(i);
+            if (!participaciones.containsKey(ni)) continue;
+
+            double ri = datosActivos.get(ni).getRiesgo();
+            double pi = participaciones.get(ni);
+
+            for (int j = i + 1; j < nombresOrdenados.size(); j++) {
+                String nj = nombresOrdenados.get(j);
+                if (!participaciones.containsKey(nj)) continue;
+
+                double rj = datosActivos.get(nj).getRiesgo();
+                double pj = participaciones.get(nj);
+                double correlacion = matrizCorrelacion[i][j];
+
+                riesgoTotal += ri * rj * correlacion * pi * pj;
             }
         }
-        return riesgo;
+
+        return riesgoTotal;
     }
+
 
 
     /**
@@ -350,10 +392,14 @@ public class OptimizacionPortafolio {
 
         // Poda 2: Riesgo
         // si riesgo_total(S) > RIESGO_MAX → retornar
-        double riesgoActual = calcularRiesgoTotal(portafolioActual);
+        // Poda 2: Riesgo
+// si riesgo_total(S) > RIESGO_MAX → retornar
+        double riesgoActual = calcularRiesgoTotal()// o mapa armado una vez antes
+        ;
         if (riesgoActual > this.RIESGO_MAX) {
             return; // Se pasó del riesgo
         }
+
 
         // Poda 3: Diversificación (Máximos de dinero)
         // si !cumple_diversificacion_parcial(S, gastoSector, gastoTipo) → retornar
@@ -365,7 +411,7 @@ public class OptimizacionPortafolio {
         // ub = cota_superior_retorno(idx, S, presupuestoUsado, |S|)
         // si ub < max(mejorRetorno, RETORNO_MIN) → retornar
         double cotaSuperior = calcularCotaSuperior(idx, portafolioActual, presupuestoUsado, portafolioActual.size());
-        double cotaInferior = Math.max(this.mejorRetorno, this.RETORNO_MIN);
+        double cotaInferior = Math.max(this.mejorRetorno, ORNO_MIN);
 
         if (cotaSuperior < cotaInferior) {
             return; // Esta rama nunca superará el récord actual ni el mínimo del cliente
@@ -404,7 +450,7 @@ public class OptimizacionPortafolio {
                             costoActual
                     );
                 }
-                // NOTA: Tu pseudocódigo no implementa el desempate por correlación,
+                // NOTA: Tu pseudocódigo no implementa el desempate por correlación,w
                 // pero si quisieras, iría en un 'else if (rActual == this.mejorRetorno)'.
             }
         }
