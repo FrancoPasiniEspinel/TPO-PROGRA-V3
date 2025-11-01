@@ -111,7 +111,7 @@ public class OptimizacionPortafolio {
      * Filtra los activos que no interesan al cliente y los ordena
      * según el perfil de riesgo (como dice el informe estratégico ).
      */
-    private List<Activo> preprocesarActivos(List<Activo> todosLosActivos, Cliente cliente) {
+    private List<Activo> preprocesarActivos(List<Activo> todosLosActivos, Cliente cliente) {//esta bien
 
         // 1. Filtrado
         List<Activo> filtrados = todosLosActivos.stream()
@@ -152,7 +152,7 @@ public class OptimizacionPortafolio {
      * Calcula el costo total de un portafolio.
      * Corresponde a 'func costo_total(S)'
      */
-    private static double calcularCostoTotal(List<Activo> portafolio) {
+    private static double calcularCostoTotal(List<Activo> portafolio) {//esta bien
         double costo = 0.0;
         for (Activo a : portafolio) {
             costo+= a.getMontoMinimo();
@@ -260,7 +260,9 @@ public class OptimizacionPortafolio {
 
         // 3. Buscar el valor en la matriz
         return this.correlaciones.getMatrizCorrelaciones().get(index1).get(index2);
-    }
+    }//no sirve
+
+
 
 
     // --- FUNCIONES AUXILIARES DE DIVERSIFICACIÓN ---
@@ -394,7 +396,7 @@ public class OptimizacionPortafolio {
         // si riesgo_total(S) > RIESGO_MAX → retornar
         // Poda 2: Riesgo
 // si riesgo_total(S) > RIESGO_MAX → retornar
-        double riesgoActual = calcularRiesgoTotal()// o mapa armado una vez antes
+      DA ERROR double riesgoActual = calcularRiesgoTotal()// cambiar parametros para que funcione
         ;
         if (riesgoActual > this.RIESGO_MAX) {
             return; // Se pasó del riesgo
@@ -411,7 +413,7 @@ public class OptimizacionPortafolio {
         // ub = cota_superior_retorno(idx, S, presupuestoUsado, |S|)
         // si ub < max(mejorRetorno, RETORNO_MIN) → retornar
         double cotaSuperior = calcularCotaSuperior(idx, portafolioActual, presupuestoUsado, portafolioActual.size());
-        double cotaInferior = Math.max(this.mejorRetorno, ORNO_MIN);
+        double cotaInferior = Math.max(this.mejorRetorno, RETORNO_MIN);
 
         if (cotaSuperior < cotaInferior) {
             return; // Esta rama nunca superará el récord actual ni el mínimo del cliente
