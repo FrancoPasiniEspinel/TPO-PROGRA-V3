@@ -30,7 +30,7 @@ public class DatosCorrelaciones {
         this.matrizCorrelaciones = matrizCorrelaciones;
     }
 
-    public static double correlacionEntreActivos(String nombre1, String nombre2) {
+    public double correlacionEntreActivos(String nombre1, String nombre2) {
         int indice_activo1 = this.nombresActivos.indexOf(nombre1);
         int indice_activo2 = this.nombresActivos.indexOf(nombre2);
         if (indice_activo1 == -1 || indice_activo2 == -1) {

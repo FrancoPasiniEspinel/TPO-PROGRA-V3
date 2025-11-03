@@ -1,10 +1,6 @@
 package clases;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.Comparator;
 
@@ -21,13 +17,13 @@ public class OptimizacionPortafolio {
     private double RIESGO_MAX;
     private double RETORNO_MIN;
     private double PRESUPUESTO_MAX;
-    private Map<String, Double> maxUSD_porSector;
-    private Map<String, Double> maxUSD_porTipo;
+    private Map<String, Double> max_porSector;
+    private Map<String, Double> max_porTipo;
 
     // NOTA: Tu pseudocódigo menciona minUSD... pero la clase Cliente no los tiene.
     // Si los necesitás para "es_diversificacion_final_valida", hay que agregarlos al Cliente.
-    private Map<String, Double> minUSD_porSector;
-    private Map<String, Double> minUSD_porTipo;
+    private Map<String, Double> min_porSector;
+    private Map<String, Double> min_porTipo;
 
     private final int MIN_ACTIVOS = 3;
     private final int MAX_ACTIVOS = 6;
@@ -65,22 +61,22 @@ public class OptimizacionPortafolio {
         this.RETORNO_MIN = cliente.getPerfil().getRetornoMinimo();
 
         // 3b. Calcular límites absolutos de diversificación (en dólares)
-        this.maxUSD_porSector = new HashMap<>();
+        this.max_porSector = new HashMap<>();
         for (Map.Entry<String, Double> entry : cliente.getPreferenciasSector().entrySet()) {
             // entry.getValue() es el porcentaje (ej: 0.30)
-            maxUSD_porSector.put(entry.getKey(), cliente.getMontoMaximo() * entry.getValue());
+            max_porSector.put(entry.getKey(), cliente.getMontoMaximo() * entry.getValue());
         }
-        this.maxUSD_porTipo = new HashMap<>();
+        this.max_porTipo = new HashMap<>();
         for (Map.Entry<String, Double> entry : cliente.getPreferenciasTipoActivo().entrySet()) {
-            maxUSD_porTipo.put(entry.getKey(), cliente.getMontoMaximo() * entry.getValue());
+            max_porTipo.put(entry.getKey(), cliente.getMontoMaximo() * entry.getValue());
         }
 
         // Inicializo los 'minUSD' vacíos por ahora
-        this.minUSD_porSector = new HashMap<>();
-        this.minUSD_porTipo = new HashMap<>();
+        this.min_porSector = new HashMap<>();
+        this.min_porTipo = new HashMap<>();
 
         // 3c. Filtrar y Ordenar la lista de activos (según tu informe estratégico)
-        this.activosElegibles = preprocesarActivos(todosLosActivos, cliente);
+        this.activosElegibles = procesarActivos(todosLosActivos, cliente);
 
 
         // 4. Inicializar mapas para el backtracking
@@ -105,45 +101,78 @@ public class OptimizacionPortafolio {
         // (El Main se encargará de imprimirlo o mostrar "No hay solución")
         return this.mejorSolucion;
     }
+    public  double calcularRiesgoTotal(List<List<Double>> matrizCorrelacion, List<Activo> activosVivos)/*los activos tenemos que pasarlos como unicos y poner la cantidad*/ {
+        double riesgoTotal = 0.0;
+        double montoTotal= calcularCostoTotal(activosVivos);
+        Set<String> activosProcesados= new HashSet<>();
+        for (int i = 0; i < activosVivos.size(); i++) {
+            String nombreActivoActual= activosVivos.get(i).getNombre();
+            if (activosProcesados.add(nombreActivoActual) == false) {
+                continue;
+            }
+            double riesgoActivo=0;
+            int contadorActivos= cantidadActivos(activosVivos.get(i).getNombre(), activosVivos);
+            double participacion=(activosVivos.get(i).getMontoMinimo()*contadorActivos)/montoTotal;//aca faltaria multiplicar por la cantidad de veces que esta el activo en el portafolio
+            riesgoActivo+=activosVivos.get(i).getRiesgo()*participacion;
+            for (int j = i+1; j<activosVivos.size(); j++) {
+                //metodo correlacion entre activos
+                riesgoActivo+=(DatosCorrelaciones.correlacionEntreActivos(activosVivos.get(j).getNombre(),activosVivos.get(i).getNombre()))*(activosVivos.get(j).getRiesgo())*(activosVivos.get(i).getRiesgo());
+
+            }
+            riesgoTotal+=riesgoActivo;
+        }
+        return riesgoTotal;
+    }
 
     /**
      * Método privado para el Pre-procesamiento (Fase Cero)
      * Filtra los activos que no interesan al cliente y los ordena
      * según el perfil de riesgo (como dice el informe estratégico ).
      */
-    private List<Activo> preprocesarActivos(List<Activo> todosLosActivos, Cliente cliente) {//esta bien
 
-        // 1. Filtrado
+    public List<Activo> procesarActivos(List<Activo> todosLosActivos, Cliente cliente) {
+
+        boolean prefiereOtrosSector = cliente.getPreferenciasSector().keySet().stream()
+                .anyMatch(s -> s.equalsIgnoreCase("Otros"));
+        boolean prefiereOtrosTipo = cliente.getPreferenciasTipoActivo().keySet().stream()
+                .anyMatch(s -> s.equalsIgnoreCase("Otros"));
+
         List<Activo> filtrados = todosLosActivos.stream()
-                // Solo activos de sectores que el cliente quiere
-                .filter(a -> cliente.getPreferenciasSector().containsKey(a.getSector()))
-                // Solo activos de tipos que el cliente quiere
-                .filter(a -> cliente.getPreferenciasTipoActivo().containsKey(a.getTipo()))
-                // Filtra activos que por sí solos ya superan el presupuesto
+                .filter(a -> prefiereOtrosSector || cliente.getPreferenciasSector().containsKey(a.getSector()))
+                .filter(a -> prefiereOtrosTipo || cliente.getPreferenciasTipoActivo().containsKey(a.getTipo()))
                 .filter(a -> a.getMontoMinimo() <= cliente.getMontoMaximo())
                 .collect(Collectors.toList());
 
-        // 2. Ordenamiento Estratégico (según tu informe)
         PerfilRiesgo perfil = cliente.getPerfil();
 
-        if (perfil == PerfilRiesgo.AGRESIVO || perfil == PerfilRiesgo.MODERADAMENTE_AGRESIVO) {
-            // Ordenar por retorno (mayor a menor)
-            filtrados.sort(Comparator.comparingDouble(Activo::getRetornoEsperado).reversed());
-        }
-        else if (perfil == PerfilRiesgo.CONSERVADOR || perfil == PerfilRiesgo.MODERADAMENTE_CONSERVADOR) {
-            // Ordenar por riesgo (menor a mayor)
-            filtrados.sort(Comparator.comparingDouble(Activo::getRiesgo));
-        }
-        else { // MODERADO
-            // Ordenar por ratio Retorno/Riesgo (mayor a menor)
-            filtrados.sort(Comparator.comparingDouble((Activo a) -> {
-                if (a.getRiesgo() == 0) return 0.0;
-                return a.getRetornoEsperado() / a.getRiesgo();
-            }).reversed());
+        switch (perfil) {
+            case AGRESIVO:
+                filtrados.sort(Comparator.comparingDouble(Activo::getRetornoEsperado).reversed());
+                break;
+
+            case MODERADAMENTE_AGRESIVO:
+                filtrados.sort(Comparator.comparingDouble(Activo::getRetornoEsperado).reversed());
+                break;
+
+            case MODERADO:
+                filtrados.sort(Comparator.comparingDouble((Activo a) -> {
+                    if (a.getRiesgo() == 0) return 0.0;
+                    return a.getRetornoEsperado() / a.getRiesgo();
+                }).reversed());
+                break;
+
+            case MODERADAMENTE_CONSERVADOR:
+                filtrados.sort(Comparator.comparingDouble(Activo::getRiesgo));
+                break;
+
+            case CONSERVADOR:
+                filtrados.sort(Comparator.comparingDouble(Activo::getRiesgo));
+                break;
         }
 
         return filtrados;
     }
+
 
 
     // --- FUNCIONES AUXILIARES DE CÁLCULO ---
@@ -183,61 +212,6 @@ public class OptimizacionPortafolio {
     // <<< ESTE MÉTODO FALTABA EN TU COPIA >>>
 
 
-    public static double calcularRiesgoTotal(
-            double[][] matrizCorrelacion,
-            List<Activo> activosVivos,
-            List<String> nombresOrdenados,
-            Map<String, Activo> datosActivos
-    ) {
-        // Paso 1: contar cuántas veces aparece cada activo
-        Map<String, Integer> cantidades = new HashMap<>();
-        double montoTotal = 0.0;
-
-        for (Activo a : activosVivos) {
-            String nombre = a.getNombre();
-            double monto = a.getMontoMinimo();
-            cantidades.put(nombre, cantidades.getOrDefault(nombre, 0) + 1);
-            montoTotal += monto;
-        }
-
-        // Paso 2: calcular participación de cada activo
-        Map<String, Double> participaciones = new HashMap<>();
-        for (String nombre : cantidades.keySet()) {
-            double montoActivo = datosActivos.get(nombre).getMontoMinimo() * cantidades.get(nombre);
-            double participacion = montoActivo / montoTotal;
-            participaciones.put(nombre, participacion);
-        }
-
-        // Paso 3: riesgo individual ponderado por participación
-        double riesgoTotal = 0.0;
-        for (String nombre : participaciones.keySet()) {
-            double riesgo = datosActivos.get(nombre).getRiesgo();
-            double participacion = participaciones.get(nombre);
-            riesgoTotal += riesgo * participacion;
-        }
-
-        // Paso 4: riesgo conjunto ponderado por participación y correlación
-        for (int i = 0; i < nombresOrdenados.size(); i++) {
-            String ni = nombresOrdenados.get(i);
-            if (!participaciones.containsKey(ni)) continue;
-
-            double ri = datosActivos.get(ni).getRiesgo();
-            double pi = participaciones.get(ni);
-
-            for (int j = i + 1; j < nombresOrdenados.size(); j++) {
-                String nj = nombresOrdenados.get(j);
-                if (!participaciones.containsKey(nj)) continue;
-
-                double rj = datosActivos.get(nj).getRiesgo();
-                double pj = participaciones.get(nj);
-                double correlacion = matrizCorrelacion[i][j];
-
-                riesgoTotal += ri * rj * correlacion * pi * pj;
-            }
-        }
-
-        return riesgoTotal;
-    }
 
 
 
@@ -273,25 +247,33 @@ public class OptimizacionPortafolio {
      * Chequea que NO se superen los MÁXIMOS de dinero por sector/tipo.
      */
     private boolean cumpleDiversificacionParcial(Map<String, Double> gastoSector, Map<String, Double> gastoTipo) {
-        // 1. Chequear gasto por Sector
-        for (Map.Entry<String, Double> entry : gastoSector.entrySet()) {
-            String sector = entry.getKey();
-            double gasto = entry.getValue();
-            if (gasto > this.maxUSD_porSector.getOrDefault(sector, Double.MAX_VALUE)) {
-                return false; // Se pasó del máximo permitido
+
+        boolean prefiereOtrosSector = this.max_porSector.keySet().stream()
+                .anyMatch(s -> s.equalsIgnoreCase("Otros"));
+        boolean prefiereOtrosTipo = this.max_porTipo.keySet().stream()
+                .anyMatch(s -> s.equalsIgnoreCase("Otros"));
+
+        if (!prefiereOtrosSector) {
+            for (Map.Entry<String, Double> entry : gastoSector.entrySet()) {
+                String sector = entry.getKey();
+                double gasto = entry.getValue();
+                if (gasto > this.max_porSector.getOrDefault(sector, Double.MAX_VALUE)) {
+                    return false;
+                }
             }
         }
 
-        // 2. Chequear gasto por Tipo
-        for (Map.Entry<String, Double> entry : gastoTipo.entrySet()) {
-            String tipo = entry.getKey();
-            double gasto = entry.getValue();
-            if (gasto > this.maxUSD_porTipo.getOrDefault(tipo, Double.MAX_VALUE)) {
-                return false; // Se pasó del máximo permitido
+        if (!prefiereOtrosTipo) {
+            for (Map.Entry<String, Double> entry : gastoTipo.entrySet()) {
+                String tipo = entry.getKey();
+                double gasto = entry.getValue();
+                if (gasto > this.max_porTipo.getOrDefault(tipo, Double.MAX_VALUE)) {
+                    return false;
+                }
             }
         }
 
-        return true; // Pasó todas las validaciones de máximos
+        return true;
     }
 
     /**
@@ -309,7 +291,7 @@ public class OptimizacionPortafolio {
         // NOTA: Tu clase Cliente no define mínimos, así que tu pseudocódigo
         // "si minUSD_porSector[s] existe..." siempre será falso.
         // Lo programo por si decidís agregarlos después.
-        for (Map.Entry<String, Double> entry : this.minUSD_porSector.entrySet()) {
+        for (Map.Entry<String, Double> entry : this.min_porSector.entrySet()) {
             String sector = entry.getKey();
             double minimoRequerido = entry.getValue();
             if (gastoSector.getOrDefault(sector, 0.0) < minimoRequerido) {
@@ -318,7 +300,7 @@ public class OptimizacionPortafolio {
         }
 
         // 3. Chequear MÍNIMOS de gasto por Tipo
-        for (Map.Entry<String, Double> entry : this.minUSD_porTipo.entrySet()) {
+        for (Map.Entry<String, Double> entry : this.min_porTipo.entrySet()) {
             String tipo = entry.getKey();
             double minimoRequerido = entry.getValue();
             if (gastoTipo.getOrDefault(tipo, 0.0) < minimoRequerido) {
@@ -335,42 +317,10 @@ public class OptimizacionPortafolio {
      * Calcula la Cota Superior de retorno (el "retorno soñado").
      * Corresponde a 'func cota_superior_retorno(...)'
      */
-    private double calcularCotaSuperior(int idx, List<Activo> portafolioActual,
-                                        double presupuestoUsado, int slotsUsados) {
 
-        // r = retorno_total(S)
-        double retornoEstimado = calcularRetornoTotal(portafolioActual);
 
-        // slotsRest = MAX_ACTIVOS - slotsUsados
-        int slotsRestantes = this.MAX_ACTIVOS - slotsUsados;
 
-        // presRest = PRESUPUESTO_MAX - presupuestoUsado
-        double presupuestoRestante = this.PRESUPUESTO_MAX - presupuestoUsado;
 
-        // candidatos = activos con índice >= idx no usados
-        // ¡VENTAJA! Ya tenemos la lista 'activosElegibles' ordenada por retorno
-        // (si el perfil es Agresivo) o por ratio (si es Moderado), que es
-        // lo que pide el pseudocódigo.
-
-        // para cada a en candidatos:
-        for (int i = idx; i < this.activosElegibles.size(); i++) {
-            if (slotsRestantes == 0) {
-                break; // No podemos agregar más activos
-            }
-
-            Activo candidato = this.activosElegibles.get(i);
-
-            // si costo[a] <= presRest: (Estimación optimista)
-            // Tu pseudocódigo lo hace simple, lo seguimos.
-            if (candidato.getMontoMinimo() <= presupuestoRestante) {
-                retornoEstimado += candidato.getRetornoEsperado();
-                presupuestoRestante -= candidato.getMontoMinimo();
-                slotsRestantes--;
-            }
-        }
-
-        return retornoEstimado;
-    }
 
 
     // --- MÉTODO BACKTRACK (COMPLETO) ---
@@ -379,7 +329,7 @@ public class OptimizacionPortafolio {
      * Esta es la función recursiva principal.
      * Corresponde al procedimiento "Backtrack" del pseudocódigo.
      */
-    private void backtrack(int idx, List<Activo> portafolioActual,
+private void backtrack(int idx, List<Activo> portafolioActual,
                            Map<String, Double> gastoSector, Map<String, Double> gastoTipo,
                            double presupuestoUsado) {
 
@@ -395,9 +345,11 @@ public class OptimizacionPortafolio {
         // Poda 2: Riesgo
         // si riesgo_total(S) > RIESGO_MAX → retornar
         // Poda 2: Riesgo
-// si riesgo_total(S) > RIESGO_MAX → retornar
-      DA ERROR double riesgoActual = calcularRiesgoTotal()// cambiar parametros para que funcione
+// si riesgo_total(S) > RIESGO_MAX → retornarDA ERROR
+
+        double riesgoActual = calcularRiesgoTotal(this.correlaciones.getMatrizCorrelaciones(), portafolioActual);
         ;
+
         if (riesgoActual > this.RIESGO_MAX) {
             return; // Se pasó del riesgo
         }
