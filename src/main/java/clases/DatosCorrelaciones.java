@@ -5,8 +5,8 @@ import java.util.Map;
 
 public class DatosCorrelaciones {
 
-    private List<String> nombresActivos;
-    private List<List<Double>> matrizCorrelaciones;
+    private static List<String> nombresActivos;
+    private static List<List<Double>> matrizCorrelaciones;
 
     public DatosCorrelaciones(List<String> nombresActivos, List<List<Double>> matrizCorrelaciones) {
         this.nombresActivos = nombresActivos;
@@ -30,14 +30,14 @@ public class DatosCorrelaciones {
         this.matrizCorrelaciones = matrizCorrelaciones;
     }
 
-    public double correlacionEntreActivos(String nombre1, String nombre2) {
-        int indice_activo1 = this.nombresActivos.indexOf(nombre1);
-        int indice_activo2 = this.nombresActivos.indexOf(nombre2);
+    public static double correlacionEntreActivos(String nombre1, String nombre2) {
+        int indice_activo1 = nombresActivos.indexOf(nombre1);
+        int indice_activo2 = nombresActivos.indexOf(nombre2);
         if (indice_activo1 == -1 || indice_activo2 == -1) {
             throw new IllegalArgumentException("Uno o ambos activos no fueron encontrados en la lista.");
         }
 
-        return this.matrizCorrelaciones.get(indice_activo1).get(indice_activo2);
+        return matrizCorrelaciones.get(indice_activo1).get(indice_activo2);
     }
 
     @Override
