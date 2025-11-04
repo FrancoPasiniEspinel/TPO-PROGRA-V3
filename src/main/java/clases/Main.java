@@ -1,3 +1,5 @@
+package clases;
+
 import clases.*;
 
 import java.io.IOException;
@@ -12,7 +14,11 @@ public class Main {
     );
 
     private static final Set<String> TIPOS_ACTIVO_VALIDOS = Set.of(
-            "ACCIONES", "BONOS", "FONDOS_MUTUOS", "INMUEBLES", "MATERIAS_PRIMAS"
+            "Accion",
+            "Bono Soberano",
+            "Obligacion Negociable",
+            "ETF",
+            "CEDEAR"
     );
 
     public static void main(String[] args) {
@@ -150,7 +156,7 @@ public class Main {
         while (porcentajeRestanteTipo > 0) {
             System.out.printf("\nPorcentaje restante a asignar: %.2f%%\n", porcentajeRestanteTipo);
             System.out.print("Ingrese Tipo de activo (o 'OTROS' para restante, 'FIN' para terminar): ");
-            String tipoActivo = teclado.nextLine().toUpperCase();
+            String tipoActivo = teclado.nextLine();
 
             if (tipoActivo.equalsIgnoreCase("FIN")) break;
 

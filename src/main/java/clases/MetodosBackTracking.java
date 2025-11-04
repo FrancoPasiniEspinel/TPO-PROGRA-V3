@@ -2,6 +2,7 @@ package clases;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class MetodosBackTracking {
 
@@ -46,11 +47,11 @@ public class MetodosBackTracking {
         this.max_porSector = new HashMap<>();
         for (Map.Entry<String, Double> entry : cliente.getPreferenciasSector().entrySet()) {
             // entry.getValue() es el porcentaje (ej: 0.30)
-            max_porSector.put(entry.getKey(), cliente.getMontoMaximo() * entry.getValue());
+            max_porSector.put(entry.getKey(), cliente.getMontoMaximo() * entry.getValue()/100);
         }
         this.max_porTipo = new HashMap<>();
         for (Map.Entry<String, Double> entry : cliente.getPreferenciasTipoActivo().entrySet()) {
-            max_porTipo.put(entry.getKey(), cliente.getMontoMaximo() * entry.getValue());
+            max_porTipo.put(entry.getKey(), cliente.getMontoMaximo() * entry.getValue() / 100.0);
         }
 
         // Inicializo los 'minUSD' vacíos por ahora
@@ -59,6 +60,9 @@ public class MetodosBackTracking {
 
         // 3c. Filtrar y Ordenar la lista de activos (según tu informe estratégico)
         this.activosElegibles = procesarActivos(todosLosActivos, cliente);
+
+        //AGREGO ESTA LINEA PARA DEBUG!!!!!
+        System.out.println("DEBUG (INICIAL): Activos elegibles disponibles: " + this.activosElegibles.size());
 
 
         // 4. Inicializar mapas para el backtracking
@@ -177,7 +181,7 @@ public class MetodosBackTracking {
         return retornoEstimado;
     }
 
-    public List<Activo> completarPorRetorno(List<Activo> activosElegibles,List<Activo> portafolioSimulado, double presupuestoRestante, int slotsRestantes) {
+    public List<Activo>  completarPorRetorno(List<Activo> activosElegibles,List<Activo> portafolioSimulado, double presupuestoRestante, int slotsRestantes) {
         double presupuestoLocal = presupuestoRestante;
 
         List<Activo> activosOrdenados = activosElegibles.stream()
@@ -200,18 +204,76 @@ public class MetodosBackTracking {
         return portafolioSimulado;
     }
     public List<Activo> procesarActivos(List<Activo> todosLosActivos, Cliente cliente) {
+        System.out.println("--- DEBUG: Iniciando procesarActivos ---");
+        System.out.println("Activos iniciales: " + todosLosActivos.size());
 
+        // --- 1. Banderas (igual que antes) ---
         boolean prefiereOtrosSector = cliente.getPreferenciasSector().keySet().stream()
                 .anyMatch(s -> s.equalsIgnoreCase("Otros"));
         boolean prefiereOtrosTipo = cliente.getPreferenciasTipoActivo().keySet().stream()
                 .anyMatch(s -> s.equalsIgnoreCase("Otros"));
+        System.out.println("¿Prefiere 'Otros' Sector? -> " + prefiereOtrosSector);
+        System.out.println("¿Prefiere 'Otros' Tipo? -> " + prefiereOtrosTipo);
 
-        List<Activo> filtrados = todosLosActivos.stream()
-                .filter(a -> prefiereOtrosSector || cliente.getPreferenciasSector().containsKey(a.getSector()))
-                .filter(a -> prefiereOtrosTipo || cliente.getPreferenciasTipoActivo().containsKey(a.getTipo()))
-                .filter(a -> a.getMontoMinimo() <= cliente.getMontoMaximo())
-                .collect(Collectors.toList());
+        // --- 2. Sets en minúscula (igual que antes) ---
+        Set<String> sectoresPermitidos = cliente.getPreferenciasSector().keySet().stream()
+                .map(String::toLowerCase)
+                .collect(Collectors.toSet());
 
+        Set<String> tiposPermitidos = cliente.getPreferenciasTipoActivo().keySet().stream()
+                .map(String::toLowerCase)
+                .collect(Collectors.toSet());
+
+        System.out.println("Sectores Permitidos (en minúscula): " + sectoresPermitidos);
+        System.out.println("Tipos Permitidos (en minúscula): " + tiposPermitidos);
+
+        // --- 3. Lógica del IF ---
+
+        // Empezamos con el stream de todos los activos
+        Stream<Activo> streamFiltrado = todosLosActivos.stream();
+
+        // Filtro 1: ¿Filtramos por Sector?
+        // Solo filtramos si la opción "Otros" NO está presente.
+        if (!prefiereOtrosSector) {
+            streamFiltrado = streamFiltrado.filter(a ->
+                    sectoresPermitidos.contains(a.getSector().toLowerCase())
+            );
+        }
+        // Si prefiereOtrosSector es 'true', este 'if' se salta
+        // y no se aplica ningún filtro de sector (quedan todos).
+        // --- DEBUG: Ver cuántos quedan después del filtro de sector ---
+        List<Activo> postSector = streamFiltrado.collect(Collectors.toList());
+        System.out.println("Activos restantes tras filtro Sector: " + postSector.size());
+        streamFiltrado = postSector.stream(); // Convertir de nuevo a stream
+
+        // Filtro 2: ¿Filtramos por Tipo?
+        // Solo filtramos si la opción "Otros" NO está presente.
+        if (!prefiereOtrosTipo) {
+            streamFiltrado = streamFiltrado.filter(a ->
+                    tiposPermitidos.contains(a.getTipo().toLowerCase())
+            );
+        }
+
+        // --- DEBUG: Ver cuántos quedan después del filtro de tipo ---
+        List<Activo> postTipo = streamFiltrado.collect(Collectors.toList());
+        System.out.println("Activos restantes tras filtro Tipo: " + postTipo.size());
+        streamFiltrado = postTipo.stream();
+        // Si prefiereOtrosTipo es 'true', este 'if' se salta.
+
+        // Filtro 3: El presupuesto (este siempre se aplica)
+        streamFiltrado = streamFiltrado.filter(a ->
+                a.getMontoMinimo() <= cliente.getMontoMaximo()
+        );
+        // --- DEBUG: Ver cuántos quedan después del filtro de presupuesto ---
+        List<Activo> postPresupuesto = streamFiltrado.collect(Collectors.toList());
+        System.out.println("Activos restantes tras filtro Presupuesto: " + postPresupuesto.size());
+        System.out.println("(Presupuesto Máx. Cliente: " + cliente.getMontoMaximo() + ")");
+        streamFiltrado = postPresupuesto.stream();
+
+        // --- 4. Recolectar y Ordenar ---
+
+        // Al final, recolectamos el resultado de todos los filtros que se hayan aplicado
+        List<Activo> filtrados = streamFiltrado.collect(Collectors.toList());
         PerfilRiesgo perfil = cliente.getPerfil();
 
         switch (perfil) {
@@ -396,10 +458,9 @@ public class MetodosBackTracking {
             scoreParaVencer = Math.max(scoreParaVencer, tercerMejorRetorno);
         }
 
-// 3. ¡LA PODA CORRECTA!
-//    Si la mejor estimación futura (cotaSuperior) ni siquiera puede
-//    superar nuestro "puntaje a vencer", cortamos esta rama.
+
         if (cotaSuperior < scoreParaVencer) {
+            System.out.println("DEBUG: Poda 4 (Cota) cortada en índice " + idx + ". Cota (" + String.format("%.4f", cotaSuperior) + ") < Minimo Requerido/3er Lugar (" + String.format("%.4f", scoreParaVencer) + ")");
             return;
         }
 
@@ -419,7 +480,7 @@ public class MetodosBackTracking {
             // (Re-usamos el 'riesgoActual' que calculamos en la Poda 2)
             if (retornoActual >= this.RETORNO_MIN &&
                     riesgoActual <= this.RIESGO_MAX &&
-                    esDiversificacionFinalValida(gastoSector, gastoTipo)) { // <-- ¡FUNCIÓN NUEVA!
+                esDiversificacionFinalValida(gastoSector, gastoTipo)){ // <-- ¡FUNCIÓN NUEVA!
 
                 // --- ¡LÓGICA DEL TOP 3! ---
 
