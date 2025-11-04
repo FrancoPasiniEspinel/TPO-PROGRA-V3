@@ -30,11 +30,8 @@ public class Main {
         // --- 1. Carga de Datos (Usando rutas reales) ---
         try {
             // **AJUSTA ESTAS RUTAS A LA UBICACIÓN CORRECTA DE TUS ARCHIVOS CSV**
-            String ruta = "C:/Users/franc/Desktop/PROGRA 3/CSV/activos_financieros_60.csv";
-            todosLosActivos = CargarDatos.leerArchivoActivos(ruta);
-
-            String ruta2 = "C:/Users/franc/Desktop/correlaciones_60 (1).csv";
-            correlaciones = CargarDatos.leerArchivoCorrelaciones(ruta2);
+            todosLosActivos = CargarDatos.leerArchivoActivos();
+            correlaciones = CargarDatos.leerArchivoCorrelaciones();
 
         } catch (IOException e) {
             System.err.println("❌ Error fatal al leer los archivos de datos. Asegúrate de que las rutas sean correctas y los archivos existan.");

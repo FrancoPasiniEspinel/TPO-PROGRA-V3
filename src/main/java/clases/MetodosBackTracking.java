@@ -18,11 +18,13 @@ public class MetodosBackTracking {
     private Map<String, Double> min_porSector;
     private Map<String, Double> min_porTipo;
 
-    private final int MIN_ACTIVOS = 3;
+    private final int MIN_ACTIVOS = 3;//cambiado
     private final int MAX_ACTIVOS = 6;
     private final int CANTIDAD_ALTERNATIVAS = 3;
 
     private List<Solucion> mejoresSoluciones;
+
+    private List<Activo> activosOrdenadosPorRetorno;
 
     public List<Portafolio> encontrarPortafolioOptimo(Cliente cliente, List<Activo> todosLosActivos, DatosCorrelaciones correlaciones) {
 
@@ -47,7 +49,7 @@ public class MetodosBackTracking {
         this.max_porSector = new HashMap<>();
         for (Map.Entry<String, Double> entry : cliente.getPreferenciasSector().entrySet()) {
             // entry.getValue() es el porcentaje (ej: 0.30)
-            max_porSector.put(entry.getKey(), cliente.getMontoMaximo() * entry.getValue()/100);
+            max_porSector.put(entry.getKey(), cliente.getMontoMaximo() * entry.getValue() / 100);
         }
         this.max_porTipo = new HashMap<>();
         for (Map.Entry<String, Double> entry : cliente.getPreferenciasTipoActivo().entrySet()) {
@@ -63,6 +65,9 @@ public class MetodosBackTracking {
 
         //AGREGO ESTA LINEA PARA DEBUG!!!!!
         System.out.println("DEBUG (INICIAL): Activos elegibles disponibles: " + this.activosElegibles.size());
+        this.activosOrdenadosPorRetorno = this.activosElegibles.stream()
+                .sorted(Comparator.comparingDouble(Activo::getRetornoEsperado).reversed())
+                .collect(Collectors.toList());
 
 
         // 4. Inicializar mapas para el backtracking
@@ -71,10 +76,10 @@ public class MetodosBackTracking {
         Map<String, Double> gastoTipoInicial = new HashMap<>();
 
         // Inicializamos los mapas de gasto en 0.0
-        for(String sector : cliente.getPreferenciasSector().keySet()) {
+        for (String sector : cliente.getPreferenciasSector().keySet()) {
             gastoSectorInicial.put(sector, 0.0);
         }
-        for(String tipo : cliente.getPreferenciasTipoActivo().keySet()) {
+        for (String tipo : cliente.getPreferenciasTipoActivo().keySet()) {
             gastoTipoInicial.put(tipo, 0.0);
         }
 
@@ -116,46 +121,50 @@ public class MetodosBackTracking {
     }
 
 
-
     public double calcularRiesgoTotal(List<List<Double>> matrizCorrelacion, List<Activo> activosVivos)/*los activos tenemos que pasarlos como unicos y poner la cantidad*/ {
         double riesgoTotal = 0.0;
-        double montoTotal= calcularCostoTotal(activosVivos);
-        Set<String> activosProcesados= new HashSet<>();
+        double montoTotal = calcularCostoTotal(activosVivos);
+        Set<String> activosProcesados = new HashSet<>();
         for (int i = 0; i < activosVivos.size(); i++) {
-            String nombreActivoActual= activosVivos.get(i).getNombre();
+            String nombreActivoActual = activosVivos.get(i).getNombre();
             if (activosProcesados.add(nombreActivoActual) == false) {
                 continue;
             }
-            double riesgoActivo=0;
-            int contadorActivos=cantidadActivos(activosVivos.get(i).getNombre(), activosVivos);
-            double participacion=(activosVivos.get(i).getMontoMinimo()*contadorActivos)/montoTotal;//aca faltaria multiplicar por la cantidad de veces que esta el activo en el portafolio
-            riesgoActivo+=activosVivos.get(i).getRiesgo()*participacion;
-            for (int j = i+1; j<activosVivos.size(); j++) {
+            double riesgoActivo = 0;
+            int contadorActivos = cantidadActivos(activosVivos.get(i).getNombre(), activosVivos);
+            double participacion = (activosVivos.get(i).getMontoMinimo() * contadorActivos) / montoTotal;//aca faltaria multiplicar por la cantidad de veces que esta el activo en el portafolio
+            riesgoActivo += activosVivos.get(i).getRiesgo() * participacion;
+            for (int j = i + 1; j < activosVivos.size(); j++) {
                 //metodo correlacion entre activos
-                riesgoActivo+=(DatosCorrelaciones.correlacionEntreActivos(activosVivos.get(j).getNombre(),activosVivos.get(i).getNombre()))*(activosVivos.get(j).getRiesgo())*(activosVivos.get(i).getRiesgo());
+                riesgoActivo += (DatosCorrelaciones.correlacionEntreActivos(activosVivos.get(j).getNombre(), activosVivos.get(i).getNombre())) * (activosVivos.get(j).getRiesgo()) * (activosVivos.get(i).getRiesgo());
 
             }
-            riesgoTotal+=riesgoActivo;
+            riesgoTotal += riesgoActivo;
+
         }
+        System.out.println("DEBUG RIESGO: " + riesgoTotal);
         return riesgoTotal;
     }
 
-    public int cantidadActivos(String nombre, List<Activo> activosVivos){
-        int contador=0;
+    public int cantidadActivos(String nombre, List<Activo> activosVivos) {
+        int contador = 0;
         for (Activo activo : activosVivos) {
-            if (activo.getNombre().equals(nombre)){
-                contador+=1;
+            if (activo.getNombre().equals(nombre)) {
+                contador += 1;
             }
         }
         return contador;
     }
 
     public double calcularRetornoTotal(List<Activo> portafolio) {
+        if  (portafolio.isEmpty()) {
+            return 0.0;
+        }
         double retorno = 0.0;
-        double montoTotal= calcularCostoTotal(portafolio);
-        for(Activo a : portafolio) {
-            double participacion=a.getMontoMinimo()/montoTotal;
-            retorno+=participacion*a.getRetornoEsperado();
+        double montoTotal = calcularCostoTotal(portafolio);
+        for (Activo a : portafolio) {
+            double participacion = a.getMontoMinimo() / montoTotal;
+            retorno += participacion * a.getRetornoEsperado();
         }
         return retorno;
     }
@@ -163,46 +172,57 @@ public class MetodosBackTracking {
     private double calcularCostoTotal(List<Activo> portafolio) {//esta bien
         double costo = 0.0;
         for (Activo a : portafolio) {
-            costo+= a.getMontoMinimo();
+            costo += a.getMontoMinimo();
         }
 
         return costo;
     }
-
+// --- REEMPLAZA TUS MÉTODOS DE COTA CON ESTO ---
 
     private double calcularCotaSuperior(int idx, List<Activo> portafolioActual,
                                         double presupuestoUsado, int slotsUsados) {
+
+        // OJO: usa portafolioActual.size() para ser preciso
         int slotsRestantes = this.MAX_ACTIVOS - portafolioActual.size();
-        double presupuestoRestante = this.PRESUPUESTO_MAX - calcularCostoTotal(portafolioActual);
+
+        // (Ya no necesitamos 'presupuestoRestante')
+
         List<Activo> portafolioSimulado = new ArrayList<>(portafolioActual);
-        List<Activo> candidatos = this.activosElegibles.subList(idx, this.activosElegibles.size());
-        List<Activo> portafolioConGreedy= completarPorRetorno(candidatos, portafolioSimulado, presupuestoRestante,slotsRestantes);
-        double retornoEstimado= calcularRetornoTotal(portafolioConGreedy);
+
+        // Llama a 'completarPorRetorno' que ahora usará la lista pre-ordenada
+        List<Activo> portafolioConGreedy = completarPorRetorno(
+                portafolioSimulado,
+                slotsRestantes
+        );
+
+        double retornoEstimado = calcularRetornoTotal(portafolioConGreedy);
         return retornoEstimado;
     }
 
-    public List<Activo>  completarPorRetorno(List<Activo> activosElegibles,List<Activo> portafolioSimulado, double presupuestoRestante, int slotsRestantes) {
-        double presupuestoLocal = presupuestoRestante;
+    /**
+     * Rellena los slots restantes de un portafolio simulado con los mejores
+     * activos de la lista pre-ordenada 'activosOrdenadosPorRetorno'.
+     * Esta versión es OPTIMISTA (ignora el presupuesto).
+     */
+    public List<Activo> completarPorRetorno(List<Activo> portafolioSimulado, int slotsRestantes) {
 
-        List<Activo> activosOrdenados = activosElegibles.stream()
-                .sorted(Comparator.comparingDouble(Activo::getRetornoEsperado).reversed())
-                .collect(Collectors.toList());
+        // ¡YA NO ORDENA! Usa el atributo de la clase (this.activosOrdenadosPorRetorno)
 
-        for (Activo activo : activosOrdenados) {
-            if (slotsRestantes != 0 && presupuestoLocal != 0) {
-                if (activo.getMontoMinimo() <= presupuestoLocal) {
-                    portafolioSimulado.add(activo);
-                    presupuestoLocal -= activo.getMontoMinimo();
+        for (Activo activo : this.activosOrdenadosPorRetorno) {
+            if (slotsRestantes != 0) {
+                // Si el portafolio simulado NO contiene ya este activo...
+                if (!portafolioSimulado.contains(activo)) {
+                    portafolioSimulado.add(activo); // ...lo agrega
                     slotsRestantes--;
                 }
             } else {
-                break;
+                break; // Se llenaron los slots
             }
-
-
         }
         return portafolioSimulado;
     }
+
+
     public List<Activo> procesarActivos(List<Activo> todosLosActivos, Cliente cliente) {
         System.out.println("--- DEBUG: Iniciando procesarActivos ---");
         System.out.println("Activos iniciales: " + todosLosActivos.size());
@@ -402,44 +422,39 @@ public class MetodosBackTracking {
     }
 
 
-
-
-
-        //-------------------------------------------------BACKTRACKING----------------------------------------------------------//
-
-
+    //-------------------------------------------------BACKTRACKING----------------------------------------------------------//
 
 
     private void backtrack(int idx, List<Activo> portafolioActual,
-                       Map<String, Double> gastoSector, Map<String, Double> gastoTipo,
-                       double presupuestoUsado) {
+                           Map<String, Double> gastoSector, Map<String, Double> gastoTipo,
+                           double presupuestoUsado) {
 
-    // --- 1. PODAS (PRUNING) ---
-    // (Las 4 podas que definiste)
+        // --- 1. PODAS (PRUNING) ---
+        // (Las 4 podas que definiste)
 
-    // Poda 1: Presupuesto
-    // si presupuestoUsado > PRESUPUESTO_MAX → retornar
-    if (presupuestoUsado > this.PRESUPUESTO_MAX) {
-        return; // Se pasó del presupuesto
-    }
+        // Poda 1: Presupuesto
+        // si presupuestoUsado > PRESUPUESTO_MAX → retornar
+        if (presupuestoUsado > this.PRESUPUESTO_MAX) {
+            return; // Se pasó del presupuesto
+        }
 
-    // Poda 2: Riesgo
-    // si riesgo_total(S) > RIESGO_MAX → retornar
-    // Poda 2: Riesgo
+        // Poda 2: Riesgo
+        // si riesgo_total(S) > RIESGO_MAX → retornar
+        // Poda 2: Riesgo
 // si riesgo_total(S) > RIESGO_MAX → retornarDA ERROR
 
-    double riesgoActual = calcularRiesgoTotal(this.correlaciones.getMatrizCorrelaciones(), portafolioActual);
+        double riesgoActual = calcularRiesgoTotal(this.correlaciones.getMatrizCorrelaciones(), portafolioActual);
 
-    if (riesgoActual > this.RIESGO_MAX) {
-        return; // Se pasó del riesgo
-    }
+        if (riesgoActual > this.RIESGO_MAX) {
+            return; // Se pasó del riesgo
+        }
 
 
-    // Poda 3: Diversificación (Máximos de dinero)
-    // si !cumple_diversificacion_parcial(S, gastoSector, gastoTipo) → retornar
-    if (!cumpleDiversificacionParcial(gastoSector, gastoTipo)) {
-        return; // Se pasó del % máximo en un sector o tipo
-    }
+        // Poda 3: Diversificación (Máximos de dinero)
+        // si !cumple_diversificacion_parcial(S, gastoSector, gastoTipo) → retornar
+        if (!cumpleDiversificacionParcial(gastoSector, gastoTipo)) {
+            return; // Se pasó del % máximo en un sector o tipo
+        }
 
 // Poda 4: Cotas (Branch and Bound)
         double cotaSuperior = calcularCotaSuperior(idx, portafolioActual, presupuestoUsado, portafolioActual.size());
@@ -465,8 +480,6 @@ public class MetodosBackTracking {
         }
 
 
-
-
 // --- 2. EVALUAR Y GUARDAR SOLUCIÓN CANDIDATA ---
 // (Esto se ejecuta si la rama NO fue podada)
 
@@ -480,7 +493,9 @@ public class MetodosBackTracking {
             // (Re-usamos el 'riesgoActual' que calculamos en la Poda 2)
             if (retornoActual >= this.RETORNO_MIN &&
                     riesgoActual <= this.RIESGO_MAX &&
-                esDiversificacionFinalValida(gastoSector, gastoTipo)){ // <-- ¡FUNCIÓN NUEVA!
+                    esDiversificacionFinalValida(gastoSector, gastoTipo)) {
+                System.out.println("DEBUG: ¡SOLUCIÓN ENCONTRADA! Ret: " + retornoActual + ", Riesgo: " + riesgoActual);
+                // <-- ¡FUNCIÓN NUEVA!
 
                 // --- ¡LÓGICA DEL TOP 3! ---
 
@@ -504,61 +519,69 @@ public class MetodosBackTracking {
                     // Quita el último elemento (el 4to, que es el peor)
                     this.mejoresSoluciones.remove(CANTIDAD_ALTERNATIVAS);
                 }
+            } else {
+                // --- AÑADE ESTE BLOQUE 'ELSE' PARA VER POR QUÉ FALLA ---
+                System.out.println("DEBUG: Solución RECHAZADA (nroActivos=" + nroActivos + ")");
+                if (retornoActual < this.RETORNO_MIN) {
+                    System.out.println("    -> MOTIVO: Retorno " + String.format("%.2f", retornoActual) + " < Mínimo " + String.format("%.2f", this.RETORNO_MIN));
+                }
+                if (riesgoActual > this.RIESGO_MAX) {
+                    System.out.println("    -> MOTIVO: Riesgo " + String.format("%.2f", riesgoActual) + " > Máximo " + String.format("%.2f", this.RIESGO_MAX));
+                }
+                if (!esDiversificacionFinalValida(gastoSector, gastoTipo)) {
+                    System.out.println("    -> MOTIVO: Falla Diversificación Final");
+                }
             }
-        }
 
 
-    // --- 3. CORTE (CASO BASE) ---
+            // --- 3. CORTE (CASO BASE) ---
 
-    // si idx == n o |S| == MAX_ACTIVOS → retornar
-    if (nroActivos == this.MAX_ACTIVOS || // Se llenó el portafolio (máx 6)
-            idx == this.activosElegibles.size()) { // No hay más activos para decidir
-        return;
-    }
+            // si idx == n o |S| == MAX_ACTIVOS → retornar
+            if (nroActivos == this.MAX_ACTIVOS || // Se llenó el portafolio (máx 6)
+                    idx == this.activosElegibles.size()) { // No hay más activos para decidir
+                return;
+            }
 
 
-    // --- 4. RECURSIÓN (RAMIFICACIÓN) ---
+            // --- 4. RECURSIÓN (RAMIFICACIÓN) ---
 
-    // Obtenemos el activo a decidir
-    Activo activoActual = this.activosElegibles.get(idx);
-    double nuevoCosto = activoActual.getMontoMinimo();
-    String sector = activoActual.getSector();
-    String tipo = activoActual.getTipo();
+            // Obtenemos el activo a decidir
+            Activo activoActual = this.activosElegibles.get(idx);
+            double nuevoCosto = activoActual.getMontoMinimo();
+            String sector = activoActual.getSector();
+            String tipo = activoActual.getTipo();
 
-    // --- Decisión 1: INCLUIR el activo 'idx' ---
+            // --- Decisión 1: INCLUIR el activo 'idx' ---
 
-    // a = Activos[idx]
-    // S.push(a)
-    portafolioActual.add(activoActual);
+            // a = Activos[idx]
+            // S.push(a)
+            portafolioActual.add(activoActual);
 
 // ¡ARREGLO! Usa getOrDefault para evitar NullPointerException
-        gastoSector.put(sector, gastoSector.getOrDefault(sector, 0.0) + nuevoCosto);
-        gastoTipo.put(tipo, gastoTipo.getOrDefault(tipo, 0.0) + nuevoCosto);
+            gastoSector.put(sector, gastoSector.getOrDefault(sector, 0.0) + nuevoCosto);
+            gastoTipo.put(tipo, gastoTipo.getOrDefault(tipo, 0.0) + nuevoCosto);
 
-    // Backtrack(idx+1, S, gastoSector, gastoTipo, presupuestoUsado + costo[a])
-    backtrack(idx + 1, portafolioActual, gastoSector, gastoTipo, presupuestoUsado + nuevoCosto);
+            // Backtrack(idx+1, S, gastoSector, gastoTipo, presupuestoUsado + costo[a])
+            backtrack(idx + 1, portafolioActual, gastoSector, gastoTipo, presupuestoUsado + nuevoCosto);
 
-    // --- Backtrack (Deshacer la decisión) ---
+            // --- Backtrack (Deshacer la decisión) ---
 
-    // S.pop()
-    portafolioActual.remove(nroActivos); // Saca el último
+            // S.pop()
+            portafolioActual.remove(nroActivos); // Saca el último
 
-    // gastoSector[sector[a]] -= costo[a]
-    gastoSector.put(sector, gastoSector.get(sector) - nuevoCosto);
-    // gastoTipo[tipo[a]] -= costo[a]
-    gastoTipo.put(tipo, gastoTipo.get(tipo) - nuevoCosto);
+            // gastoSector[sector[a]] -= costo[a]
+            gastoSector.put(sector, gastoSector.get(sector) - nuevoCosto);
+            // gastoTipo[tipo[a]] -= costo[a]
+            // ...
+            gastoTipo.put(tipo, gastoTipo.get(tipo) - nuevoCosto);
 
 
-    // --- Decisión 2: NO INCLUIR el activo 'idx' ---
+            // --- Decisión 2: NO INCLUIR el activo 'idx' ---
 
-    // Backtrack(idx+1, S, gastoSector, gastoTipo, presupuestoUsado)
-    backtrack(idx + 1, portafolioActual, gastoSector, gastoTipo, presupuestoUsado);
+            // Backtrack(idx+1, S, gastoSector, gastoTipo, presupuestoUsado)
+            backtrack(idx + 1, portafolioActual, gastoSector, gastoTipo, presupuestoUsado);
+        }
+    }
 }
 
 // <<< BORRÉ EL MÉTODO 'backtrack' VACÍO QUE ESTABA DUPLICADO ACÁ >>>
-}
-
-
-
-
-

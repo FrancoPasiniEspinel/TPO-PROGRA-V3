@@ -1,6 +1,7 @@
 package clases;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -9,9 +10,15 @@ public  class CargarDatos {
 
     //chequear si este metodo esta bien
 
-    public static List<Activo> leerArchivoActivos(String ruta) throws IOException {
+    public static List<Activo> leerArchivoActivos() throws IOException {
+        String nombreArchivo = "/activos_financieros_60.csv"; // El "/" inicial es importante
+        InputStream inputStream = CargarDatos.class.getResourceAsStream(nombreArchivo);
+        // 3. ¡Importante! Verifica que el archivo exista
+        if (inputStream == null) {
+            throw new IOException("No se pudo encontrar el archivo en resources: " + nombreArchivo);
+        }
         List<Activo> listaActivos = new ArrayList<>();
-        try (BufferedReader entrada = new BufferedReader(new FileReader(ruta))){
+        try (BufferedReader entrada = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))){
             entrada.readLine();
             String linea;
             while ((linea = entrada.readLine()) != null) {
@@ -27,7 +34,7 @@ public  class CargarDatos {
 
     public static Activo completarAtributos(String[] atributos) {
         String nombre= atributos[0];
-        double retornoEsperado = Double.parseDouble(atributos[1].replace(',', '.'));
+        double retornoEsperado = Double.parseDouble(atributos[1]);
         double riesgo = Double.parseDouble(atributos[2]);
         double montoMinimo = Double.parseDouble(atributos[3]);
         String tipo=atributos[4];
@@ -44,12 +51,23 @@ public  class CargarDatos {
         //preguntar si hay que cargar todos los archivos en memoria
     }
 
-    public static DatosCorrelaciones leerArchivoCorrelaciones(String ruta) throws IOException {
-        var elArchivo = new File(ruta);
+    public static DatosCorrelaciones leerArchivoCorrelaciones() throws IOException {
+// 1. Define el nombre del archivo (como está en la carpeta 'resources')
+        String nombreArchivo = "/correlaciones_60 (1).csv"; // <-- ¡Cambia esto si tu archivo se llama diferente!
+
         List<String> nombresActivos = new ArrayList<>();
         List<List<Double>> matrizCorrelaciones = new ArrayList<>();
 
-        try (BufferedReader br = new BufferedReader(new FileReader(elArchivo))) {
+        // 2. Obtén el archivo como InputStream
+        // ¡RECUERDA CAMBIAR 'LectorDeCorrelaciones.class' por el nombre de tu clase!
+        InputStream inputStream = CargarDatos.class.getResourceAsStream(nombreArchivo);
+
+        // 3. Verifica que el archivo se encontró
+        if (inputStream == null) {
+            throw new IOException("No se pudo encontrar el archivo en resources: " + nombreArchivo);
+        }
+
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
             String linea;
 
             // 1. Leer la primera fila (encabezados) para los nombres

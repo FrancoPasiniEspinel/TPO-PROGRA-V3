@@ -21,4 +21,5 @@ public enum PerfilRiesgo {
     public double getRetornoMinimo() {
         return retornoMinimo;
     }
+
 }
