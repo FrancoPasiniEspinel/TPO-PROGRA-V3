@@ -36,8 +36,9 @@ public class DatosCorrelaciones {
         if (indice_activo1 == -1 || indice_activo2 == -1) {
             throw new IllegalArgumentException("Uno o ambos activos no fueron encontrados en la lista.");
         }
-
-        return matrizCorrelaciones.get(indice_activo1).get(indice_activo2);
+        double res=matrizCorrelaciones.get(indice_activo1).get(indice_activo2);
+        System.out.println("correlacion entre activo 1: "+nombre1+" activo 2: "+nombre2+" resultado: "+res);
+        return res;
     }
 
     @Override

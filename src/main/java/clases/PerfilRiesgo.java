@@ -3,7 +3,7 @@ package clases;
 public enum PerfilRiesgo {
     CONSERVADOR (20,10),
     MODERADAMENTE_CONSERVADOR (30,12),
-    MODERADO (40,14),
+    MODERADO (150000,0),
     MODERADAMENTE_AGRESIVO (50,16),
     AGRESIVO (60,18);
 

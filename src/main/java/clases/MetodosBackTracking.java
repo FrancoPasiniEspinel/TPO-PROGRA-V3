@@ -4,6 +4,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static java.sql.DriverManager.println;
+
 public class MetodosBackTracking {
 
     private Cliente cliente;
@@ -22,8 +24,8 @@ public class MetodosBackTracking {
     private final int MAX_ACTIVOS = 6;
     private final int CANTIDAD_ALTERNATIVAS = 3;
 
-    private List<Solucion> mejoresSoluciones;
 
+    private Set<Solucion> solucionesUnicas;
     private List<Activo> activosOrdenadosPorRetorno;
 
     public List<Portafolio> encontrarPortafolioOptimo(Cliente cliente, List<Activo> todosLosActivos, DatosCorrelaciones correlaciones) {
@@ -33,7 +35,7 @@ public class MetodosBackTracking {
         this.correlaciones = correlaciones;
 
         // 2. Inicializar estado de la solución
-        this.mejoresSoluciones = new ArrayList<>(); // Equivale a -infinito
+        this.solucionesUnicas = new HashSet<>();// Equivale a -infinito
 
         // 3. Fase Cero: Preparación Inteligente (Pre-procesamiento)
 
@@ -64,7 +66,7 @@ public class MetodosBackTracking {
         this.activosElegibles = procesarActivos(todosLosActivos, cliente);
 
         //AGREGO ESTA LINEA PARA DEBUG!!!!!
-        System.out.println("DEBUG (INICIAL): Activos elegibles disponibles: " + this.activosElegibles.size());
+        //System.out.println("DEBUG (INICIAL): Activos elegibles disponibles: " + this.activosElegibles.size());
         this.activosOrdenadosPorRetorno = this.activosElegibles.stream()
                 .sorted(Comparator.comparingDouble(Activo::getRetornoEsperado).reversed())
                 .collect(Collectors.toList());
@@ -87,22 +89,38 @@ public class MetodosBackTracking {
         // S = ∅ (una nueva lista vacía)
         // presupuestoUsado = 0
         backtrack(0, new ArrayList<Activo>(), gastoSectorInicial, gastoTipoInicial, 0.0);
-        List<Portafolio> portafoliosOrdenados = new ArrayList<>();
-        for (Solucion s : this.mejoresSoluciones) {
-            portafoliosOrdenados.add(s.getPortafolio());
+        //System.out.println("DEBUG: Backtracking finalizado. Soluciones únicas encontradas: " + this.solucionesUnicas.size());
+//6a. Convertir el Set a una List
+        List<Solucion> ranking = new ArrayList<>(this.solucionesUnicas);
+
+// 6b. Ordenar la lista (de mayor a menor retorno, usando compareTo)
+        Collections.sort(ranking);
+
+// 6c. Extraer los portafolios del Top 3 (o menos si no hay 3)
+        List<Portafolio> portafoliosTop = new ArrayList<>();
+        int count = 0;
+        for (Solucion s : ranking) {
+            /*if (count >= CANTIDAD_ALTERNATIVAS) {
+                break; // Ya tenemos el Top 3
+            }*/
+            portafoliosTop.add(s.getPortafolio());
+            //count++;
         }
 
-        return portafoliosOrdenados; // Devuelve la lista Top 3
-    }
+        return portafoliosTop; }
 
     // Pon esta clase DENTRO de tu clase principal del optimizador
     private class Solucion implements Comparable<Solucion> {
         Portafolio portafolio;
         double retorno;
+        private final Set<String> nombresActivos;
 
         public Solucion(Portafolio portafolio, double retorno) {
             this.portafolio = portafolio;
             this.retorno = retorno;
+            this.nombresActivos = portafolio.getActivosSeleccionados().stream()
+                    .map(Activo::getNombre)
+                    .collect(Collectors.toSet());
         }
 
         public double getRetorno() {
@@ -118,31 +136,74 @@ public class MetodosBackTracking {
         public int compareTo(Solucion otra) {
             return Double.compare(otra.retorno, this.retorno);
         }
+        // --- ¡AÑADE EL MÉTODO equals! ---
+        // Dos soluciones son "iguales" si tienen el mismo conjunto de activos
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) return true;
+            if (obj == null || getClass() != obj.getClass()) return false;
+            Solucion that = (Solucion) obj;
+            // Compara los Sets de nombres de activos
+            return this.nombresActivos.equals(that.nombresActivos);
+        }
+
+        // --- ¡AÑADE EL MÉTODO hashCode! ---
+        // Un hashCode basado en los nombres de los activos
+        @Override
+        public int hashCode() {
+            return Objects.hash(nombresActivos);
+        }
     }
 
 
-    public double calcularRiesgoTotal(List<List<Double>> matrizCorrelacion, List<Activo> activosVivos)/*los activos tenemos que pasarlos como unicos y poner la cantidad*/ {
+    public double calcularRiesgoTotal(List<List<Double>> matrizCorrelacion, List<Activo> activosVivos){
+
         double riesgoTotal = 0.0;
+
+
         double montoTotal = calcularCostoTotal(activosVivos);
+        if (montoTotal==0) {
+        return 0.0;
+        }
         Set<String> activosProcesados = new HashSet<>();
+        System.out.println("Portafolio : ");
+        for (Activo a : activosVivos) {
+            System.out.println(a.getNombre());
+        }
         for (int i = 0; i < activosVivos.size(); i++) {
+            double riesgoActivo=0.0;
+            double filaCorrelacion=0.0;
             String nombreActivoActual = activosVivos.get(i).getNombre();
+            System.out.println("Activo Actual : "+nombreActivoActual);
             if (activosProcesados.add(nombreActivoActual) == false) {
                 continue;
             }
-            double riesgoActivo = 0;
             int contadorActivos = cantidadActivos(activosVivos.get(i).getNombre(), activosVivos);
+
+            System.out.println("Contador Activos : "+contadorActivos+ " activo: "+nombreActivoActual);
             double participacion = (activosVivos.get(i).getMontoMinimo() * contadorActivos) / montoTotal;//aca faltaria multiplicar por la cantidad de veces que esta el activo en el portafolio
-            riesgoActivo += activosVivos.get(i).getRiesgo() * participacion;
+            System.out.println("participacion : "+participacion+" de: "+nombreActivoActual);
+            riesgoActivo = (activosVivos.get(i).getRiesgo() * participacion);
+            System.out.println("Riesgo individual: "+riesgoActivo);
             for (int j = i + 1; j < activosVivos.size(); j++) {
+                double
+                System.out.println("segundo activo: "+activosVivos.get(j).getNombre());
                 //metodo correlacion entre activos
-                riesgoActivo += (DatosCorrelaciones.correlacionEntreActivos(activosVivos.get(j).getNombre(), activosVivos.get(i).getNombre())) * (activosVivos.get(j).getRiesgo()) * (activosVivos.get(i).getRiesgo());
+                System.out.println("primer riesgo:"+activosVivos.get(i).getRiesgo());
+                System.out.println("segundo riesgo:"+activosVivos.get(j).getRiesgo());
+                
+                System.out.println("riesgo conjunto entre "+nombreActivoActual+" y "+activosVivos.get(j).getNombre()+" : ");
+
+                filaCorrelacion+=
+
 
             }
-            riesgoTotal += riesgoActivo;
+            riesgoTotal=filaCorrelacion+riesgoActivo;
+            System.out.println("Riesgo total: "+riesgoTotal);
+
 
         }
-        System.out.println("DEBUG RIESGO: " + riesgoTotal);
+        //System.out.println("DEBUG RIESGO: " + riesgoTotal);
         return riesgoTotal;
     }
 
@@ -178,37 +239,37 @@ public class MetodosBackTracking {
         return costo;
     }
 // --- REEMPLAZA TUS MÉTODOS DE COTA CON ESTO ---
+private double calcularCotaSuperior(int idx, List<Activo> portafolioActual,
+                                    double presupuestoUsado, int slotsUsados) {
 
-    private double calcularCotaSuperior(int idx, List<Activo> portafolioActual,
-                                        double presupuestoUsado, int slotsUsados) {
+    // OJO: usa portafolioActual.size() para ser preciso
+    int slotsRestantes = this.MAX_ACTIVOS - portafolioActual.size();
 
-        // OJO: usa portafolioActual.size() para ser preciso
-        int slotsRestantes = this.MAX_ACTIVOS - portafolioActual.size();
+    // (Ya no necesitamos 'presupuestoRestante')
 
-        // (Ya no necesitamos 'presupuestoRestante')
+    List<Activo> portafolioSimulado = new ArrayList<>(portafolioActual);
+    List<Activo> candidatos = this.activosOrdenadosPorRetorno.subList(idx, this.activosOrdenadosPorRetorno.size());
 
-        List<Activo> portafolioSimulado = new ArrayList<>(portafolioActual);
+    // Llama a 'completarPorRetorno' que ahora usará la lista pre-ordenada
+    List<Activo> portafolioConGreedy = completarPorRetorno(candidatos,
+            portafolioSimulado,
+            slotsRestantes
+    );
 
-        // Llama a 'completarPorRetorno' que ahora usará la lista pre-ordenada
-        List<Activo> portafolioConGreedy = completarPorRetorno(
-                portafolioSimulado,
-                slotsRestantes
-        );
-
-        double retornoEstimado = calcularRetornoTotal(portafolioConGreedy);
-        return retornoEstimado;
-    }
+    double retornoEstimado = calcularRetornoTotal(portafolioConGreedy);
+    return retornoEstimado;
+}
 
     /**
-     * Rellena los slots restantes de un portafolio simulado con los mejores
-     * activos de la lista pre-ordenada 'activosOrdenadosPorRetorno'.
-     * Esta versión es OPTIMISTA (ignora el presupuesto).
-     */
-    public List<Activo> completarPorRetorno(List<Activo> portafolioSimulado, int slotsRestantes) {
+
+     Rellena los slots restantes de un portafolio simulado con los mejores
+     activos de la lista pre-ordenada 'activosOrdenadosPorRetorno'.
+     Esta versión es OPTIMISTA (ignora el presupuesto).*/
+    public List<Activo> completarPorRetorno(List<Activo> candidatos, List<Activo> portafolioSimulado, int slotsRestantes) {
 
         // ¡YA NO ORDENA! Usa el atributo de la clase (this.activosOrdenadosPorRetorno)
 
-        for (Activo activo : this.activosOrdenadosPorRetorno) {
+        for (Activo activo : candidatos) {
             if (slotsRestantes != 0) {
                 // Si el portafolio simulado NO contiene ya este activo...
                 if (!portafolioSimulado.contains(activo)) {
@@ -223,17 +284,18 @@ public class MetodosBackTracking {
     }
 
 
+
     public List<Activo> procesarActivos(List<Activo> todosLosActivos, Cliente cliente) {
-        System.out.println("--- DEBUG: Iniciando procesarActivos ---");
-        System.out.println("Activos iniciales: " + todosLosActivos.size());
+        /*System.out.println("--- DEBUG: Iniciando procesarActivos ---");
+        System.out.println("Activos iniciales: " + todosLosActivos.size());*/
 
         // --- 1. Banderas (igual que antes) ---
         boolean prefiereOtrosSector = cliente.getPreferenciasSector().keySet().stream()
                 .anyMatch(s -> s.equalsIgnoreCase("Otros"));
         boolean prefiereOtrosTipo = cliente.getPreferenciasTipoActivo().keySet().stream()
                 .anyMatch(s -> s.equalsIgnoreCase("Otros"));
-        System.out.println("¿Prefiere 'Otros' Sector? -> " + prefiereOtrosSector);
-        System.out.println("¿Prefiere 'Otros' Tipo? -> " + prefiereOtrosTipo);
+        /*System.out.println("¿Prefiere 'Otros' Sector? -> " + prefiereOtrosSector);
+        System.out.println("¿Prefiere 'Otros' Tipo? -> " + prefiereOtrosTipo);*/
 
         // --- 2. Sets en minúscula (igual que antes) ---
         Set<String> sectoresPermitidos = cliente.getPreferenciasSector().keySet().stream()
@@ -244,8 +306,8 @@ public class MetodosBackTracking {
                 .map(String::toLowerCase)
                 .collect(Collectors.toSet());
 
-        System.out.println("Sectores Permitidos (en minúscula): " + sectoresPermitidos);
-        System.out.println("Tipos Permitidos (en minúscula): " + tiposPermitidos);
+        /*System.out.println("Sectores Permitidos (en minúscula): " + sectoresPermitidos);
+        System.out.println("Tipos Permitidos (en minúscula): " + tiposPermitidos);*/
 
         // --- 3. Lógica del IF ---
 
@@ -261,10 +323,10 @@ public class MetodosBackTracking {
         }
         // Si prefiereOtrosSector es 'true', este 'if' se salta
         // y no se aplica ningún filtro de sector (quedan todos).
-        // --- DEBUG: Ver cuántos quedan después del filtro de sector ---
+        /* --- DEBUG: Ver cuántos quedan después del filtro de sector ---
         List<Activo> postSector = streamFiltrado.collect(Collectors.toList());
         System.out.println("Activos restantes tras filtro Sector: " + postSector.size());
-        streamFiltrado = postSector.stream(); // Convertir de nuevo a stream
+        streamFiltrado = postSector.stream();*/ // Convertir de nuevo a stream
 
         // Filtro 2: ¿Filtramos por Tipo?
         // Solo filtramos si la opción "Otros" NO está presente.
@@ -274,21 +336,21 @@ public class MetodosBackTracking {
             );
         }
 
-        // --- DEBUG: Ver cuántos quedan después del filtro de tipo ---
+        /* --- DEBUG: Ver cuántos quedan después del filtro de tipo ---
         List<Activo> postTipo = streamFiltrado.collect(Collectors.toList());
         System.out.println("Activos restantes tras filtro Tipo: " + postTipo.size());
-        streamFiltrado = postTipo.stream();
+        streamFiltrado = postTipo.stream();*/
         // Si prefiereOtrosTipo es 'true', este 'if' se salta.
 
         // Filtro 3: El presupuesto (este siempre se aplica)
         streamFiltrado = streamFiltrado.filter(a ->
                 a.getMontoMinimo() <= cliente.getMontoMaximo()
         );
-        // --- DEBUG: Ver cuántos quedan después del filtro de presupuesto ---
+        /* --- DEBUG: Ver cuántos quedan después del filtro de presupuesto ---
         List<Activo> postPresupuesto = streamFiltrado.collect(Collectors.toList());
         System.out.println("Activos restantes tras filtro Presupuesto: " + postPresupuesto.size());
         System.out.println("(Presupuesto Máx. Cliente: " + cliente.getMontoMaximo() + ")");
-        streamFiltrado = postPresupuesto.stream();
+        streamFiltrado = postPresupuesto.stream();*/
 
         // --- 4. Recolectar y Ordenar ---
 
@@ -331,66 +393,98 @@ public class MetodosBackTracking {
     private boolean cumpleDiversificacionParcial(Map<String, Double> gastoSector, Map<String, Double> gastoTipo) {
 
         // --- 1. Revisión de Sectores ---
-        double gastoOtrosSector = 0.0; // Acumulador para gasto "Otros"
+        double gastoOtrosSector = 0.0;
+
+        String claveOtrosSector = null;
+        for (String k : this.max_porSector.keySet()) {
+            if (k.equalsIgnoreCase("Otros")) {
+                claveOtrosSector = k; // En tu caso, encontrará "otros"
+                break;
+            }
+        }
+
+        // --- NUEVO DEBUG ---
+        //System.out.println("  [DEBUG PODA 3 - Sector] Clave 'Otros' encontrada: " + claveOtrosSector);
+        //System.out.println("  [DEBUG PODA 3 - Sector] Gasto actual: " + gastoSector);
+        // --- FIN DEBUG ---
 
         for (Map.Entry<String, Double> entry : gastoSector.entrySet()) {
             String sector = entry.getKey();
             double gasto = entry.getValue();
 
-            // Verifica si el sector actual tiene un límite específico (ej: "Tecnologia")
             if (this.max_porSector.containsKey(sector)) {
-                // Es un sector específico. Comprueba su límite.
                 if (gasto > this.max_porSector.get(sector)) {
-                    return false; // Violó el límite de un sector específico
+                    System.out.println("    -> FALLA: Límite de sector específico " + sector);
+                    return false;
                 }
-            } else {
-                // No es un sector específico, así que suma al gasto de "Otros"
+            } else if (claveOtrosSector == null || !sector.equalsIgnoreCase(claveOtrosSector)) {
+                // (Si claveOtrosSector es null, O si el sector no es la clave "Otros")
                 gastoOtrosSector += gasto;
             }
         }
 
-        // Al final del bucle, comprueba el límite total de "Otros" (si existe)
-        if (this.max_porSector.containsKey("Otros")) {
-            if (gastoOtrosSector > this.max_porSector.get("Otros")) {
-                return false; // Violó el límite de "Otros"
+        // --- NUEVO DEBUG ---
+        //System.out.println("  [DEBUG PODA 3 - Sector] Gasto 'Otros' acumulado: " + gastoOtrosSector);
+        // --- FIN DEBUG ---
+
+        if (claveOtrosSector != null) {
+            if (gastoOtrosSector > this.max_porSector.get(claveOtrosSector)) {
+                System.out.println("    -> FALLA: Límite de 'Otros' (Sector) excedido.");
+                return false;
             }
         } else if (gastoOtrosSector > 0) {
-            // Hubo gasto "Otro" pero la categoría "Otros" no estaba permitida
+            System.out.println("    -> FALLA: Gasto 'Otros' (Sector) no permitido.");
             return false;
         }
 
+        // --- 2. Revisión de Tipos (con los mismos debugs) ---
+        double gastoOtrosTipo = 0.0;
 
-        // --- 2. Revisión de Tipos (misma lógica) ---
-        double gastoOtrosTipo = 0.0; // Acumulador para gasto "Otros"
+        String claveOtrosTipo = null;
+        for (String k : this.max_porTipo.keySet()) {
+            if (k.equalsIgnoreCase("Otros")) {
+                claveOtrosTipo = k;
+                break;
+            }
+        }
+
+        // --- NUEVO DEBUG ---
+        //System.out.println("  [DEBUG PODA 3 - Tipo] Clave 'Otros' encontrada: " + claveOtrosTipo);
+        //System.out.println("  [DEBUG PODA 3 - Tipo] Gasto actual: " + gastoTipo);
+        // --- FIN DEBUG ---
 
         for (Map.Entry<String, Double> entry : gastoTipo.entrySet()) {
             String tipo = entry.getKey();
             double gasto = entry.getValue();
 
             if (this.max_porTipo.containsKey(tipo)) {
-                // Es un tipo específico. Comprueba su límite.
                 if (gasto > this.max_porTipo.get(tipo)) {
-                    return false; // Violó el límite de un tipo específico
+                    System.out.println("    -> FALLA: Límite de tipo específico " + tipo);
+                    return false;
                 }
-            } else {
-                // No es un tipo específico, suma al gasto de "Otros"
+            } else if (claveOtrosTipo == null || !tipo.equalsIgnoreCase(claveOtrosTipo)) {
                 gastoOtrosTipo += gasto;
             }
         }
 
-        // Al final, comprueba el límite total de "Otros" para Tipos
-        if (this.max_porTipo.containsKey("Otros")) {
-            if (gastoOtrosTipo > this.max_porTipo.get("Otros")) {
-                return false; // Violó el límite de "Otros"
+        // --- NUEVO DEBUG ---
+        //System.out.println("  [DEBUG PODA 3 - Tipo] Gasto 'Otros' acumulado: " + gastoOtrosTipo);
+        // --- FIN DEBUG ---
+
+        if (claveOtrosTipo != null) {
+            if (gastoOtrosTipo > this.max_porTipo.get(claveOtrosTipo)) {
+                //System.out.println("    -> FALLA: Límite de 'Otros' (Tipo) excedido.");
+                return false;
             }
         } else if (gastoOtrosTipo > 0) {
+            //System.out.println("    -> FALLA: Gasto 'Otros' (Tipo) no permitido.");
             return false;
         }
 
-        // Si pasó todas las revisiones, es válido
+        // Si pasó todo, imprime esto
+        //System.out.println("  [DEBUG PODA 3] -> PASA");
         return true;
     }
-
     private boolean esDiversificacionFinalValida(Map<String, Double> gastoSector, Map<String, Double> gastoTipo) {
         // 1. Chequear máximos (reutilizamos la función anterior)
         if (!cumpleDiversificacionParcial(gastoSector, gastoTipo)) {
@@ -435,7 +529,9 @@ public class MetodosBackTracking {
         // Poda 1: Presupuesto
         // si presupuestoUsado > PRESUPUESTO_MAX → retornar
         if (presupuestoUsado > this.PRESUPUESTO_MAX) {
+            System.out.println("Presupuesto supera lo establecido");
             return; // Se pasó del presupuesto
+
         }
 
         // Poda 2: Riesgo
@@ -446,6 +542,7 @@ public class MetodosBackTracking {
         double riesgoActual = calcularRiesgoTotal(this.correlaciones.getMatrizCorrelaciones(), portafolioActual);
 
         if (riesgoActual > this.RIESGO_MAX) {
+            //System.out.println("DEBUG: el riesgo acutal es mayor al riesgo maximo");
             return; // Se pasó del riesgo
         }
 
@@ -453,32 +550,21 @@ public class MetodosBackTracking {
         // Poda 3: Diversificación (Máximos de dinero)
         // si !cumple_diversificacion_parcial(S, gastoSector, gastoTipo) → retornar
         if (!cumpleDiversificacionParcial(gastoSector, gastoTipo)) {
+            //System.out.println("DEBUG: no comple diversificaion actual");
             return; // Se pasó del % máximo en un sector o tipo
         }
 
 // Poda 4: Cotas (Branch and Bound)
         double cotaSuperior = calcularCotaSuperior(idx, portafolioActual, presupuestoUsado, portafolioActual.size());
-
-// 1. Determinar el "puntaje a vencer".
-//    Por defecto, es el mínimo que pide el cliente.
-        double scoreParaVencer = this.RETORNO_MIN;
-
-// 2. Si ya tenemos un Top 3 completo...
-        if (this.mejoresSoluciones.size() == CANTIDAD_ALTERNATIVAS) {
-
-            // ...el "puntaje a vencer" es el retorno de la 3ra mejor solución.
-            double tercerMejorRetorno = this.mejoresSoluciones.get(CANTIDAD_ALTERNATIVAS - 1).getRetorno();
-
-            // Nos quedamos con el más alto entre el mínimo del cliente y nuestro 3er lugar
-            scoreParaVencer = Math.max(scoreParaVencer, tercerMejorRetorno);
+        double scoreParaVencer = this.RETORNO_MIN; // ¡Solo podemos usar el mínimo!, ya que lo que queremos es saber si es un portafolio valido
+        if (idx == 0 && portafolioActual.size() == 0) {
+            System.out.println("DEBUG PODA 4 INICIAL: Cota Máx (Opt) = " + String.format("%.4f", cotaSuperior) + ". Minimo Requerido = " + String.format("%.4f", scoreParaVencer));
         }
-
 
         if (cotaSuperior < scoreParaVencer) {
-            System.out.println("DEBUG: Poda 4 (Cota) cortada en índice " + idx + ". Cota (" + String.format("%.4f", cotaSuperior) + ") < Minimo Requerido/3er Lugar (" + String.format("%.4f", scoreParaVencer) + ")");
+            //System.out.println("DEBUG: Poda 4 (Cota) cortada en índice " + idx + "...");
             return;
         }
-
 
 // --- 2. EVALUAR Y GUARDAR SOLUCIÓN CANDIDATA ---
 // (Esto se ejecuta si la rama NO fue podada)
@@ -489,49 +575,24 @@ public class MetodosBackTracking {
 // si MIN_ACTIVOS ≤ |S| (ya sabemos que es ≤ MAX_ACTIVOS por la poda)
         if (nroActivos >= this.MIN_ACTIVOS) {
 
-            // Comprobamos si cumple las condiciones FINALES
-            // (Re-usamos el 'riesgoActual' que calculamos en la Poda 2)
             if (retornoActual >= this.RETORNO_MIN &&
                     riesgoActual <= this.RIESGO_MAX &&
                     esDiversificacionFinalValida(gastoSector, gastoTipo)) {
-                System.out.println("DEBUG: ¡SOLUCIÓN ENCONTRADA! Ret: " + retornoActual + ", Riesgo: " + riesgoActual);
-                // <-- ¡FUNCIÓN NUEVA!
 
-                // --- ¡LÓGICA DEL TOP 3! ---
+                //System.out.println("DEBUG: ¡SOLUCIÓN VÁLIDA ENCONTRADA! Ret: " + retornoActual + ", Riesgo: " + riesgoActual);
 
                 // 1. Crear el objeto Solucion
                 double costoActual = calcularCostoTotal(portafolioActual);
-
                 Solucion nuevaSolucion = new Solucion(
-                        // ¡IMPORTANTE! Se crea una COPIA del portafolio y sus activos
+                        // ¡IMPORTANTE! Se crea una COPIA
                         new Portafolio(new ArrayList<>(portafolioActual), retornoActual, riesgoActual, costoActual),
                         retornoActual);
 
-                // 2. Añadir la nueva solución a la lista
-                this.mejoresSoluciones.add(nuevaSolucion);
-
-                // 3. Re-ordenar la lista (de mayor a menor retorno)
-                //    (La clase Solucion debe tener el método 'compareTo' para esto)
-                Collections.sort(this.mejoresSoluciones);
-
-                // 4. Recortar la lista si excede el Top 3
-                if (this.mejoresSoluciones.size() > CANTIDAD_ALTERNATIVAS) {
-                    // Quita el último elemento (el 4to, que es el peor)
-                    this.mejoresSoluciones.remove(CANTIDAD_ALTERNATIVAS);
-                }
-            } else {
-                // --- AÑADE ESTE BLOQUE 'ELSE' PARA VER POR QUÉ FALLA ---
-                System.out.println("DEBUG: Solución RECHAZADA (nroActivos=" + nroActivos + ")");
-                if (retornoActual < this.RETORNO_MIN) {
-                    System.out.println("    -> MOTIVO: Retorno " + String.format("%.2f", retornoActual) + " < Mínimo " + String.format("%.2f", this.RETORNO_MIN));
-                }
-                if (riesgoActual > this.RIESGO_MAX) {
-                    System.out.println("    -> MOTIVO: Riesgo " + String.format("%.2f", riesgoActual) + " > Máximo " + String.format("%.2f", this.RIESGO_MAX));
-                }
-                if (!esDiversificacionFinalValida(gastoSector, gastoTipo)) {
-                    System.out.println("    -> MOTIVO: Falla Diversificación Final");
-                }
+                // 2. Añadir al Set.
+                // ¡'equals' y 'hashCode' se encargan de los duplicados!
+                this.solucionesUnicas.add(nuevaSolucion);
             }
+        }
 
 
             // --- 3. CORTE (CASO BASE) ---
@@ -570,10 +631,20 @@ public class MetodosBackTracking {
             portafolioActual.remove(nroActivos); // Saca el último
 
             // gastoSector[sector[a]] -= costo[a]
-            gastoSector.put(sector, gastoSector.get(sector) - nuevoCosto);
-            // gastoTipo[tipo[a]] -= costo[a]
-            // ...
-            gastoTipo.put(tipo, gastoTipo.get(tipo) - nuevoCosto);
+// Lógica de "Undo" más segura
+        double gastoActualSector = gastoSector.get(sector);
+        if (gastoActualSector - nuevoCosto == 0.0) {
+            gastoSector.remove(sector); // Elimina la clave si el gasto es 0
+        } else {
+            gastoSector.put(sector, gastoActualSector - nuevoCosto);
+        }
+
+        double gastoActualTipo = gastoTipo.get(tipo);
+        if (gastoActualTipo - nuevoCosto == 0.0) {
+            gastoTipo.remove(tipo); // Elimina la clave si el gasto es 0
+        } else {
+            gastoTipo.put(tipo, gastoActualTipo - nuevoCosto);
+        }
 
 
             // --- Decisión 2: NO INCLUIR el activo 'idx' ---
@@ -582,6 +653,6 @@ public class MetodosBackTracking {
             backtrack(idx + 1, portafolioActual, gastoSector, gastoTipo, presupuestoUsado);
         }
     }
-}
+
 
 // <<< BORRÉ EL MÉTODO 'backtrack' VACÍO QUE ESTABA DUPLICADO ACÁ >>>

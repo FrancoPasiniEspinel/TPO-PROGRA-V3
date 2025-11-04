@@ -34,7 +34,7 @@ public class Main {
             correlaciones = CargarDatos.leerArchivoCorrelaciones();
 
         } catch (IOException e) {
-            System.err.println("❌ Error fatal al leer los archivos de datos. Asegúrate de que las rutas sean correctas y los archivos existan.");
+            System.err.println(" Error fatal al leer los archivos de datos. Asegúrate de que las rutas sean correctas y los archivos existan.");
             System.err.println("Detalle: " + e.getMessage());
             return;
         }
@@ -228,7 +228,7 @@ public class Main {
                     System.out.printf("  Riesgo Total (Desv. Est.): %.4f\n", p.getRiesgoTotalAjustado());
                     System.out.printf("  Costo de Inversión: $%.2f\n", p.getCostoTotal());
 
-                    String activosNombres = p.getActivosSeleccionados().stream()
+                    String activosNombres  = p.getActivosSeleccionados().stream()
                             .map(Activo::getNombre)
                             .collect(Collectors.joining(", "));
                     System.out.println("  Activos Seleccionados: " + activosNombres);

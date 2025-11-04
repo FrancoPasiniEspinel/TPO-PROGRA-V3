@@ -1,0 +1,5 @@
+Ticker,RetornoEsperado,Riesgo,InversionMinima,Tipo,Sector,2019,2020,2021,2022,2023
+VFIAX,14.60,6.50,15000,Accion,Tecnologia,3.1,-4.51,18.23,16.97,15.79
+VSMAX,7.80,4.80,25000,Accion,Energia,3.1,-4.51,18.23,16.97,15.79
+VBTLX,7.40,4.50,50000,Accion,Tecnologia,3.1,-4.51,18.23,16.97,15.79
+IAU,8.10,5.30,20000,Accion,Salud,3.1,-4.51,18.23,16.97,15.79
