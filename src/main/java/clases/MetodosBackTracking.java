@@ -157,53 +157,26 @@ public class MetodosBackTracking {
 
 
     public double calcularRiesgoTotal(List<List<Double>> matrizCorrelacion, List<Activo> activosVivos){
-
         double riesgoTotal = 0.0;
-
-
         double montoTotal = calcularCostoTotal(activosVivos);
         if (montoTotal==0) {
         return 0.0;
         }
         Set<String> activosProcesados = new HashSet<>();
-        System.out.println("Portafolio : ");
-        for (Activo a : activosVivos) {
-            System.out.println(a.getNombre());
-        }
         for (int i = 0; i < activosVivos.size(); i++) {
             double riesgoActivo=0.0;
-            double filaCorrelacion=0.0;
             String nombreActivoActual = activosVivos.get(i).getNombre();
-            System.out.println("Activo Actual : "+nombreActivoActual);
             if (activosProcesados.add(nombreActivoActual) == false) {
                 continue;
             }
             int contadorActivos = cantidadActivos(activosVivos.get(i).getNombre(), activosVivos);
-
-            System.out.println("Contador Activos : "+contadorActivos+ " activo: "+nombreActivoActual);
-            double participacion = (activosVivos.get(i).getMontoMinimo() * contadorActivos) / montoTotal;//aca faltaria multiplicar por la cantidad de veces que esta el activo en el portafolio
-            System.out.println("participacion : "+participacion+" de: "+nombreActivoActual);
-            riesgoActivo = (activosVivos.get(i).getRiesgo() * participacion);
-            System.out.println("Riesgo individual: "+riesgoActivo);
+            double participacion = (activosVivos.get(i).getMontoMinimo() * contadorActivos) / montoTotal;
+            riesgoActivo = ((activosVivos.get(i).getRiesgo()) * participacion);
+            riesgoTotal += riesgoActivo;
             for (int j = i + 1; j < activosVivos.size(); j++) {
-                double
-                System.out.println("segundo activo: "+activosVivos.get(j).getNombre());
-                //metodo correlacion entre activos
-                System.out.println("primer riesgo:"+activosVivos.get(i).getRiesgo());
-                System.out.println("segundo riesgo:"+activosVivos.get(j).getRiesgo());
-                
-                System.out.println("riesgo conjunto entre "+nombreActivoActual+" y "+activosVivos.get(j).getNombre()+" : ");
-
-                filaCorrelacion+=
-
-
+                riesgoTotal += ((DatosCorrelaciones.correlacionEntreActivos(activosVivos.get(i).getNombre(), activosVivos.get(j).getNombre())) * (activosVivos.get(i).getRiesgo()) * (activosVivos.get(j).getRiesgo())) / 100;
             }
-            riesgoTotal=filaCorrelacion+riesgoActivo;
-            System.out.println("Riesgo total: "+riesgoTotal);
-
-
         }
-        //System.out.println("DEBUG RIESGO: " + riesgoTotal);
         return riesgoTotal;
     }
 
