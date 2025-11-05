@@ -10,7 +10,7 @@ public class Main {
 
     // Definiciones estáticas para la validación de entrada
     private static final Set<String> SECTORES_VALIDOS = Set.of(
-            "TECNOLOGIA", "FINANZAS", "ENERGIA", "SALUD", "CONSUMO_BASICO", "COMUNICACIONES", "SERVICIOS"
+            "Tecnologia", "Finanzas", "Energia", "Salud", "Agro"
     );
 
     private static final Set<String> TIPOS_ACTIVO_VALIDOS = Set.of(
@@ -126,7 +126,7 @@ public class Main {
                 teclado.nextLine();
 
                 if (porcentaje <= 0 || porcentaje > porcentajeRestanteSector) {
-                    System.out.printf("⚠️ Porcentaje no válido. Máximo: %.2f%%.\n", porcentajeRestanteSector);
+                    System.out.printf(" Porcentaje no válido. Máximo: %.2f%%.\n", porcentajeRestanteSector);
                     continue;
                 }
 
@@ -135,14 +135,14 @@ public class Main {
                 System.out.printf("Asignado. (Total %s: %.2f%%).\n", sector, preferenciasSector.get(sector));
 
             } catch (InputMismatchException e) {
-                System.out.println("⚠️ Entrada no válida. Ingrese un número.");
+                System.out.println(" Entrada no válida. Ingrese un número.");
                 teclado.nextLine();
             }
         }
-        if (porcentajeRestanteSector <= 0) System.out.println("✅ 100% sectorial asignado.");
+        if (porcentajeRestanteSector <= 0) System.out.println(" 100% sectorial asignado.");
 
 
-        // --- Lógica de Preferencias por Tipo de Activo ---
+        //Lógica de Preferencias por Tipo de Activo
 
         Map<String, Double> preferenciasTipoActivo = new HashMap<>();
         double porcentajeRestanteTipo = 100.0;
@@ -166,7 +166,7 @@ public class Main {
             }
 
             if (!TIPOS_ACTIVO_VALIDOS.contains(tipoActivo)) {
-                System.out.println("⚠️ Tipo de activo no válido. Elija de la lista.");
+                System.out.println(" Tipo de activo no válido. Elija de la lista.");
                 continue;
             }
 
@@ -176,7 +176,7 @@ public class Main {
                 teclado.nextLine();
 
                 if (porcentaje <= 0 || porcentaje > porcentajeRestanteTipo) {
-                    System.out.printf("⚠️ Porcentaje no válido. Máximo: %.2f%%.\n", porcentajeRestanteTipo);
+                    System.out.printf("Porcentaje no válido. Máximo: %.2f%%.\n", porcentajeRestanteTipo);
                     continue;
                 }
 
@@ -185,23 +185,22 @@ public class Main {
                 System.out.printf("Asignado. (Total %s: %.2f%%).\n", tipoActivo, preferenciasTipoActivo.get(tipoActivo));
 
             } catch (InputMismatchException e) {
-                System.out.println("⚠️ Entrada no válida. Ingrese un número.");
+                System.out.println(" Entrada no válida. Ingrese un número.");
                 teclado.nextLine();
             }
         }
 
-        if (porcentajeRestanteTipo <= 0) System.out.println("✅ 100% tipos asignado.");
+        if (porcentajeRestanteTipo <= 0) System.out.println("100% tipos asignado.");
 
 
-        // --- 3. Creación del Cliente y Llamada al Backtracking ---
+        // 3. Creación del Cliente y Llamada al Backtracking
 
         Cliente cliente = new Cliente(nombre, montoMaximo, plazoInversion, perfilSeleccionado, preferenciasSector, preferenciasTipoActivo);
         System.out.println("\n--- Cliente Creado Exitosamente ---");
 
 
-        // -------------------------------------------------------------------
-        // --- 4. EJECUCIÓN DEL ALGORITMO ---
-        // -------------------------------------------------------------------
+        // 4. EJECUCIÓN DEL ALGORITMO
+
 
         System.out.println("\n--- Calculando Portafolio Óptimo (Backtracking) ---");
         try {
@@ -218,14 +217,14 @@ public class Main {
             // 5. Mostrar el resultado
             System.out.println("\n--- RECOMENDACIONES DE PORTAFOLIO (TOP 3) ---");
             if (portafoliosFinales.isEmpty()) {
-                System.out.println("❌ No se encontró ningún portafolio que cumpla con todas las restricciones del cliente.");
+                System.out.println("No se encontró ningún portafolio que cumpla con todas las restricciones del cliente.");
             } else {
                 int i = 1;
                 for (Portafolio p : portafoliosFinales) {
                     System.out.println("----------------------------------------");
                     System.out.println("Alternativa #" + i++);
-                    System.out.printf("  Retorno Esperado: %.4f\n", p.getRetornoTotalEstimado());
-                    System.out.printf("  Riesgo Total (Desv. Est.): %.4f\n", p.getRiesgoTotalAjustado());
+                    System.out.printf("  Retorno Esperado: %.4f\n", p.getRetornoTotalEstimado(),"%");
+                    System.out.printf("  Riesgo Total (Desv. Est.): %.4f\n", p.getRiesgoTotalAjustado(),"%");
                     System.out.printf("  Costo de Inversión: $%.2f\n", p.getCostoTotal());
 
                     String activosNombres  = p.getActivosSeleccionados().stream()
@@ -237,7 +236,7 @@ public class Main {
             }
 
         } catch (Exception e) {
-            System.err.println("❌ ERROR INESPERADO durante el cálculo del portafolio: " + e.getMessage());
+            System.out.println("ERROR INESPERADO durante el cálculo del portafolio: " + e.getMessage());
             e.printStackTrace();
         }
 

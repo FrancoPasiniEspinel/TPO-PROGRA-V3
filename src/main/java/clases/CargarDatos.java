@@ -11,7 +11,7 @@ public  class CargarDatos {
     //chequear si este metodo esta bien
 
     public static List<Activo> leerArchivoActivos() throws IOException {
-        String nombreArchivo = "/Prueba Riesgo Activo.csv"; // El "/" inicial es importante
+        String nombreArchivo = "/activos_financieros_60.csv"; // El "/" inicial es importante
         InputStream inputStream = CargarDatos.class.getResourceAsStream(nombreArchivo);
         // 3. ¡Importante! Verifica que el archivo exista
         if (inputStream == null) {
@@ -53,7 +53,7 @@ public  class CargarDatos {
 
     public static DatosCorrelaciones leerArchivoCorrelaciones() throws IOException {
 // 1. Define el nombre del archivo (como está en la carpeta 'resources')
-        String nombreArchivo = "/Prueba riesgo matriz correlacion.csv"; // <-- ¡Cambia esto si tu archivo se llama diferente!
+        String nombreArchivo = "/correlaciones_60 (1).csv"; // <-- ¡Cambia esto si tu archivo se llama diferente!
 
         List<String> nombresActivos = new ArrayList<>();
         List<List<Double>> matrizCorrelaciones = new ArrayList<>();

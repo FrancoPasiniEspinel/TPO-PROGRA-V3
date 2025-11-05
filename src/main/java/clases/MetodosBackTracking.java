@@ -4,7 +4,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static java.sql.DriverManager.println;
 
 public class MetodosBackTracking {
 
@@ -40,57 +39,51 @@ public class MetodosBackTracking {
         // 3. Fase Cero: Preparación Inteligente (Pre-procesamiento)
 
         // 3a. Calcular límites y restricciones del Cliente
-        // (Hago esto aquí porque me pediste no modificar las clases originales)
         this.PRESUPUESTO_MAX = cliente.getMontoMaximo();
         this.RIESGO_MAX = cliente.getPerfil().getRiesgoMaximo();
 
         // Usamos el retorno del perfil
         this.RETORNO_MIN = cliente.getPerfil().getRetornoMinimo();
 
-        // 3b. Calcular límites absolutos de diversificación (en dólares)
+        // Calcular límites absolutos de diversificación
         this.max_porSector = new HashMap<>();
         for (Map.Entry<String, Double> entry : cliente.getPreferenciasSector().entrySet()) {
-            // entry.getValue() es el porcentaje (ej: 0.30)
-            max_porSector.put(entry.getKey(), cliente.getMontoMaximo() * entry.getValue() / 100);
+            String claveNormalizada = entry.getKey().toLowerCase();
+            max_porSector.put(claveNormalizada, cliente.getMontoMaximo() * entry.getValue() / 100);
         }
         this.max_porTipo = new HashMap<>();
         for (Map.Entry<String, Double> entry : cliente.getPreferenciasTipoActivo().entrySet()) {
-            max_porTipo.put(entry.getKey(), cliente.getMontoMaximo() * entry.getValue() / 100.0);
+            String claveNormalizada = entry.getKey().toLowerCase();
+            max_porTipo.put(claveNormalizada, cliente.getMontoMaximo() * entry.getValue() / 100.0);
         }
 
-        // Inicializo los 'minUSD' vacíos por ahora
+        // Inicializamos los HashMap de diversificacion
         this.min_porSector = new HashMap<>();
         this.min_porTipo = new HashMap<>();
 
         // 3c. Filtrar y Ordenar la lista de activos (según tu informe estratégico)
         this.activosElegibles = procesarActivos(todosLosActivos, cliente);
 
-        //AGREGO ESTA LINEA PARA DEBUG!!!!!
-        //System.out.println("DEBUG (INICIAL): Activos elegibles disponibles: " + this.activosElegibles.size());
         this.activosOrdenadosPorRetorno = this.activosElegibles.stream()
                 .sorted(Comparator.comparingDouble(Activo::getRetornoEsperado).reversed())
                 .collect(Collectors.toList());
 
 
         // 4. Inicializar mapas para el backtracking
-        // (gastoSector y gastoTipo del pseudocódigo)
         Map<String, Double> gastoSectorInicial = new HashMap<>();
         Map<String, Double> gastoTipoInicial = new HashMap<>();
 
         // Inicializamos los mapas de gasto en 0.0
         for (String sector : cliente.getPreferenciasSector().keySet()) {
-            gastoSectorInicial.put(sector, 0.0);
+            gastoSectorInicial.put(sector.toLowerCase(), 0.0);
         }
         for (String tipo : cliente.getPreferenciasTipoActivo().keySet()) {
-            gastoTipoInicial.put(tipo, 0.0);
+            gastoTipoInicial.put(tipo.toLowerCase(), 0.0);
         }
 
         // 5. Iniciar la recursión
-        // S = ∅ (una nueva lista vacía)
-        // presupuestoUsado = 0
         backtrack(0, new ArrayList<Activo>(), gastoSectorInicial, gastoTipoInicial, 0.0);
-        //System.out.println("DEBUG: Backtracking finalizado. Soluciones únicas encontradas: " + this.solucionesUnicas.size());
-//6a. Convertir el Set a una List
+//6a. Convertir el Set que devuelve el backtracking
         List<Solucion> ranking = new ArrayList<>(this.solucionesUnicas);
 
 // 6b. Ordenar la lista (de mayor a menor retorno, usando compareTo)
@@ -100,16 +93,15 @@ public class MetodosBackTracking {
         List<Portafolio> portafoliosTop = new ArrayList<>();
         int count = 0;
         for (Solucion s : ranking) {
-            /*if (count >= CANTIDAD_ALTERNATIVAS) {
+            if (count >= CANTIDAD_ALTERNATIVAS) {
                 break; // Ya tenemos el Top 3
-            }*/
+            }
             portafoliosTop.add(s.getPortafolio());
-            //count++;
+            count++;
         }
 
         return portafoliosTop; }
-
-    // Pon esta clase DENTRO de tu clase principal del optimizador
+    
     private class Solucion implements Comparable<Solucion> {
         Portafolio portafolio;
         double retorno;
@@ -136,7 +128,7 @@ public class MetodosBackTracking {
         public int compareTo(Solucion otra) {
             return Double.compare(otra.retorno, this.retorno);
         }
-        // --- ¡AÑADE EL MÉTODO equals! ---
+
         // Dos soluciones son "iguales" si tienen el mismo conjunto de activos
         @Override
         public boolean equals(Object obj) {
@@ -147,7 +139,7 @@ public class MetodosBackTracking {
             return this.nombresActivos.equals(that.nombresActivos);
         }
 
-        // --- ¡AÑADE EL MÉTODO hashCode! ---
+
         // Un hashCode basado en los nombres de los activos
         @Override
         public int hashCode() {
@@ -501,8 +493,7 @@ private double calcularCotaSuperior(int idx, List<Activo> portafolioActual,
 
         // Poda 1: Presupuesto
         // si presupuestoUsado > PRESUPUESTO_MAX → retornar
-        if (presupuestoUsado > this.PRESUPUESTO_MAX) {
-            System.out.println("Presupuesto supera lo establecido");
+        if (presupuestoUsado > this.PRESUPUESTO_MAX) {;
             return; // Se pasó del presupuesto
 
         }
@@ -582,8 +573,8 @@ private double calcularCotaSuperior(int idx, List<Activo> portafolioActual,
             // Obtenemos el activo a decidir
             Activo activoActual = this.activosElegibles.get(idx);
             double nuevoCosto = activoActual.getMontoMinimo();
-            String sector = activoActual.getSector();
-            String tipo = activoActual.getTipo();
+            String sector = activoActual.getSector().toLowerCase();
+            String tipo = activoActual.getTipo().toLowerCase();
 
             // --- Decisión 1: INCLUIR el activo 'idx' ---
 
