@@ -6,7 +6,7 @@ public class Cliente {
     private double montoMaximo;
     private int plazoInversion;
     private PerfilRiesgo perfil;
-    private  Map<String, Double> preferenciasSector;//ES ESTO O UNA CLASE INTERMEDIA LLAMADA PREFERENCIAS
+    private  Map<String, Double> preferenciasSector;
     private Map<String, Double> preferenciasTipoActivo;
 
     public Cliente(String nombre, double montoMaximo, int plazoInversion, PerfilRiesgo perfil, Map<String, Double> preferenciasSector, Map<String, Double> preferenciasTipoActivo) {
@@ -79,6 +79,5 @@ public class Cliente {
                 ", preferenciasTipoActivo=" + preferenciasTipoActivo +
                 '}';
     }
-    //Metodos (que tipo de metodos implementaria)
 }
 

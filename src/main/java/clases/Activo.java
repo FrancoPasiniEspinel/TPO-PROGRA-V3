@@ -13,7 +13,6 @@ public class Activo {
     private String tipo;
     private String sector;
     private List<Double> historial; //hashmap
-    // hashmap correlaciones???<---no es atributo<--- tenemos que hacer algun metodo para usar la informacion de la matriz de correlaciones
 
 
     public Activo(String nombre, double retornoEsperado, double riesgo, double montoMinimo, String tipo, String sector, List<Double> historial) {
@@ -95,18 +94,4 @@ public class Activo {
                 ", historial=" + historial +
                 '}';
     }
-
-
-
-    //Metodos
-    /*public void agregarRendimiento(double rendimiento) {
-        historial.add(rendimiento);
-    }*/
-
-
-
-
-
-
-
 }

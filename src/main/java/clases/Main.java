@@ -10,26 +10,25 @@ public class Main {
 
     // Definiciones estáticas para la validación de entrada
     private static final Set<String> SECTORES_VALIDOS = Set.of(
-            "Tecnologia", "Finanzas", "Energia", "Salud", "Agro"
+            "tecnologia", "finanzas", "energia", "salud", "agro"
     );
 
     private static final Set<String> TIPOS_ACTIVO_VALIDOS = Set.of(
-            "Accion",
-            "Bono Soberano",
-            "Obligacion Negociable",
-            "ETF",
-            "CEDEAR"
+            "accion",
+            "bono soberano",
+            "obligacion negociable",
+            "etf",
+            "cedear"
     );
 
     public static void main(String[] args) {
 
-        // --- VARIABLES GLOBALES DE DATOS ---
+        //VARIABLES GLOBALES DE DATOS
         List<Activo> todosLosActivos = new ArrayList<>();
         DatosCorrelaciones correlaciones = null;
 
-        // --- 1. Carga de Datos (Usando rutas reales) ---
+        // 1. Carga de Datos
         try {
-            // **AJUSTA ESTAS RUTAS A LA UBICACIÓN CORRECTA DE TUS ARCHIVOS CSV**
             todosLosActivos = CargarDatos.leerArchivoActivos();
             correlaciones = CargarDatos.leerArchivoCorrelaciones();
 
@@ -41,13 +40,12 @@ public class Main {
 
         Scanner teclado = new Scanner(System.in);
 
-        // --- 2. Ingreso de Datos del Cliente (Interacción) ---
+        //2. Ingreso de Datos del Cliente
 
         System.out.print("------MENÚ PRINCIPAL------\n");
         System.out.print("Ingrese su nombre: ");
         String nombre = teclado.nextLine();
 
-        // [Lógica para PerfilRiesgo]
         PerfilRiesgo perfilSeleccionado = null;
         while (perfilSeleccionado == null) {
             try {
@@ -60,7 +58,6 @@ public class Main {
             }
         }
 
-        // [Lógica para Monto Máximo]
         double montoMaximo = 0;
         while (montoMaximo <= 0) {
             try {
@@ -76,7 +73,7 @@ public class Main {
         }
         teclado.nextLine();
 
-        // [Lógica para Plazo Inversión]
+
         int plazoInversion = 0;
         while (plazoInversion <= 0) {
             try {
@@ -93,7 +90,6 @@ public class Main {
         teclado.nextLine();
 
 
-        // --- Lógica de Preferencias por Sector ---
         Map<String, Double> preferenciasSector = new HashMap<>();
         double porcentajeRestanteSector = 100.0;
 
@@ -103,13 +99,13 @@ public class Main {
         while (porcentajeRestanteSector > 0) {
             System.out.printf("\nPorcentaje restante a asignar a sectores: %.2f%%\n", porcentajeRestanteSector);
             System.out.print("Ingrese Sector (o 'OTROS' para restante, 'FIN' para terminar): ");
-            String sector = teclado.nextLine().toUpperCase();
+            String sector = teclado.nextLine().toLowerCase();
 
-            if (sector.equalsIgnoreCase("FIN")) break;
+            if (sector.equals("fin")) break;
 
-            if (sector.equalsIgnoreCase("OTROS")) {
+            if (sector.equals("otros")) {
                 if (porcentajeRestanteSector > 0) {
-                    preferenciasSector.put("OTROS", porcentajeRestanteSector);
+                    preferenciasSector.put("otros", porcentajeRestanteSector);
                     porcentajeRestanteSector = 0;
                 }
                 break;
@@ -142,8 +138,6 @@ public class Main {
         if (porcentajeRestanteSector <= 0) System.out.println(" 100% sectorial asignado.");
 
 
-        //Lógica de Preferencias por Tipo de Activo
-
         Map<String, Double> preferenciasTipoActivo = new HashMap<>();
         double porcentajeRestanteTipo = 100.0;
 
@@ -153,13 +147,13 @@ public class Main {
         while (porcentajeRestanteTipo > 0) {
             System.out.printf("\nPorcentaje restante a asignar: %.2f%%\n", porcentajeRestanteTipo);
             System.out.print("Ingrese Tipo de activo (o 'OTROS' para restante, 'FIN' para terminar): ");
-            String tipoActivo = teclado.nextLine();
+            String tipoActivo = teclado.nextLine().toLowerCase();
 
-            if (tipoActivo.equalsIgnoreCase("FIN")) break;
+            if (tipoActivo.equals("fin")) break;
 
-            if (tipoActivo.equalsIgnoreCase("OTROS")) {
+            if (tipoActivo.equals("otros")) {
                 if (porcentajeRestanteTipo > 0) {
-                    preferenciasTipoActivo.put("OTROS", porcentajeRestanteTipo);
+                    preferenciasTipoActivo.put("otros", porcentajeRestanteTipo);
                     porcentajeRestanteTipo = 0;
                 }
                 break;
@@ -204,10 +198,10 @@ public class Main {
 
         System.out.println("\n--- Calculando Portafolio Óptimo (Backtracking) ---");
         try {
-            // Instanciar el optimizador
+            // instanciamos
             MetodosBackTracking optimizador = new MetodosBackTracking();
 
-            // Llamar a la función con los datos REALES
+            // Llamar a la función con los datos reales
             List<Portafolio> portafoliosFinales = optimizador.encontrarPortafolioOptimo(
                     cliente,
                     todosLosActivos,
@@ -219,18 +213,29 @@ public class Main {
             if (portafoliosFinales.isEmpty()) {
                 System.out.println("No se encontró ningún portafolio que cumpla con todas las restricciones del cliente.");
             } else {
-                int i = 1;
-                for (Portafolio p : portafoliosFinales) {
-                    System.out.println("----------------------------------------");
-                    System.out.println("Alternativa #" + i++);
-                    System.out.printf("  Retorno Esperado: %.4f\n", p.getRetornoTotalEstimado(),"%");
-                    System.out.printf("  Riesgo Total (Desv. Est.): %.4f\n", p.getRiesgoTotalAjustado(),"%");
-                    System.out.printf("  Costo de Inversión: $%.2f\n", p.getCostoTotal());
+                for (int i=0; i<portafoliosFinales.size(); i++) {
+                    if (i==0){
+                        System.out.println("----------------------------------------");
+                        System.out.println("PORTAFOLIO GANADOR!");
+                        System.out.printf("  Retorno Esperado: %.4f%%\n", portafoliosFinales.get(i).getRetornoTotalEstimado());
+                        System.out.printf("  Riesgo Total (Desv. Est.): %.4f%%\n", portafoliosFinales.get(i).getRiesgoTotalAjustado());
+                        System.out.printf("  Costo de Inversión: $%.2f\n", portafoliosFinales.get(i).getCostoTotal());
+                        String activosNombres  = portafoliosFinales.get(i).getActivosSeleccionados().stream()
+                                .map(Activo::getNombre)
+                                .collect(Collectors.joining(", "));
+                        System.out.println("  Activos Seleccionados: " + activosNombres);
 
-                    String activosNombres  = p.getActivosSeleccionados().stream()
-                            .map(Activo::getNombre)
-                            .collect(Collectors.joining(", "));
-                    System.out.println("  Activos Seleccionados: " + activosNombres);
+                    }else {
+                        System.out.println("----------------------------------------");
+                        System.out.println("Alternativa #" + i);
+                        System.out.printf("  Retorno Esperado: %.4f%%\n", portafoliosFinales.get(i).getRetornoTotalEstimado());
+                        System.out.printf("  Riesgo Total (Desv. Est.): %.4f%%\n", portafoliosFinales.get(i).getRiesgoTotalAjustado());
+                        System.out.printf("  Costo de Inversión: $%.2f\n", portafoliosFinales.get(i).getCostoTotal());
+                        String activosNombres = portafoliosFinales.get(i).getActivosSeleccionados().stream()
+                                .map(Activo::getNombre)
+                                .collect(Collectors.joining(", "));
+                        System.out.println("  Activos Seleccionados: " + activosNombres);
+                    }
                 }
                 System.out.println("----------------------------------------");
             }

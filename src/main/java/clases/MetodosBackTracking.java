@@ -6,8 +6,6 @@ import java.util.stream.Stream;
 
 
 public class MetodosBackTracking {
-
-    private Cliente cliente;
     private List<Activo> activosElegibles; // La lista pre-filtrada y ordenada
     private DatosCorrelaciones correlaciones;
     private double RIESGO_MAX;
@@ -30,7 +28,6 @@ public class MetodosBackTracking {
     public List<Portafolio> encontrarPortafolioOptimo(Cliente cliente, List<Activo> todosLosActivos, DatosCorrelaciones correlaciones) {
 
         // 1. Guardar entradas en variables de instancia
-        this.cliente = cliente;
         this.correlaciones = correlaciones;
 
         // 2. Inicializar estado de la solución
@@ -101,7 +98,7 @@ public class MetodosBackTracking {
         }
 
         return portafoliosTop; }
-    
+
     private class Solucion implements Comparable<Solucion> {
         Portafolio portafolio;
         double retorno;
@@ -148,7 +145,7 @@ public class MetodosBackTracking {
     }
 
 
-    public double calcularRiesgoTotal(List<List<Double>> matrizCorrelacion, List<Activo> activosVivos){
+    public double calcularRiesgoTotal(List<Activo> activosVivos){
         double riesgoTotal = 0.0;
         double montoTotal = calcularCostoTotal(activosVivos);
         if (montoTotal==0) {
@@ -203,19 +200,13 @@ public class MetodosBackTracking {
 
         return costo;
     }
-// --- REEMPLAZA TUS MÉTODOS DE COTA CON ESTO ---
+
 private double calcularCotaSuperior(int idx, List<Activo> portafolioActual,
                                     double presupuestoUsado, int slotsUsados) {
-
-    // OJO: usa portafolioActual.size() para ser preciso
     int slotsRestantes = this.MAX_ACTIVOS - portafolioActual.size();
-
-    // (Ya no necesitamos 'presupuestoRestante')
 
     List<Activo> portafolioSimulado = new ArrayList<>(portafolioActual);
     List<Activo> candidatos = this.activosOrdenadosPorRetorno.subList(idx, this.activosOrdenadosPorRetorno.size());
-
-    // Llama a 'completarPorRetorno' que ahora usará la lista pre-ordenada
     List<Activo> portafolioConGreedy = completarPorRetorno(candidatos,
             portafolioSimulado,
             slotsRestantes
@@ -225,24 +216,18 @@ private double calcularCotaSuperior(int idx, List<Activo> portafolioActual,
     return retornoEstimado;
 }
 
-    /**
 
-     Rellena los slots restantes de un portafolio simulado con los mejores
-     activos de la lista pre-ordenada 'activosOrdenadosPorRetorno'.
-     Esta versión es OPTIMISTA (ignora el presupuesto).*/
     public List<Activo> completarPorRetorno(List<Activo> candidatos, List<Activo> portafolioSimulado, int slotsRestantes) {
 
-        // ¡YA NO ORDENA! Usa el atributo de la clase (this.activosOrdenadosPorRetorno)
 
         for (Activo activo : candidatos) {
             if (slotsRestantes != 0) {
-                // Si el portafolio simulado NO contiene ya este activo...
                 if (!portafolioSimulado.contains(activo)) {
-                    portafolioSimulado.add(activo); // ...lo agrega
+                    portafolioSimulado.add(activo);
                     slotsRestantes--;
                 }
             } else {
-                break; // Se llenaron los slots
+                break;
             }
         }
         return portafolioSimulado;
@@ -251,16 +236,13 @@ private double calcularCotaSuperior(int idx, List<Activo> portafolioActual,
 
 
     public List<Activo> procesarActivos(List<Activo> todosLosActivos, Cliente cliente) {
-        /*System.out.println("--- DEBUG: Iniciando procesarActivos ---");
-        System.out.println("Activos iniciales: " + todosLosActivos.size());*/
+
 
         // --- 1. Banderas (igual que antes) ---
         boolean prefiereOtrosSector = cliente.getPreferenciasSector().keySet().stream()
                 .anyMatch(s -> s.equalsIgnoreCase("Otros"));
         boolean prefiereOtrosTipo = cliente.getPreferenciasTipoActivo().keySet().stream()
                 .anyMatch(s -> s.equalsIgnoreCase("Otros"));
-        /*System.out.println("¿Prefiere 'Otros' Sector? -> " + prefiereOtrosSector);
-        System.out.println("¿Prefiere 'Otros' Tipo? -> " + prefiereOtrosTipo);*/
 
         // --- 2. Sets en minúscula (igual que antes) ---
         Set<String> sectoresPermitidos = cliente.getPreferenciasSector().keySet().stream()
@@ -270,9 +252,6 @@ private double calcularCotaSuperior(int idx, List<Activo> portafolioActual,
         Set<String> tiposPermitidos = cliente.getPreferenciasTipoActivo().keySet().stream()
                 .map(String::toLowerCase)
                 .collect(Collectors.toSet());
-
-        /*System.out.println("Sectores Permitidos (en minúscula): " + sectoresPermitidos);
-        System.out.println("Tipos Permitidos (en minúscula): " + tiposPermitidos);*/
 
         // --- 3. Lógica del IF ---
 
@@ -286,12 +265,7 @@ private double calcularCotaSuperior(int idx, List<Activo> portafolioActual,
                     sectoresPermitidos.contains(a.getSector().toLowerCase())
             );
         }
-        // Si prefiereOtrosSector es 'true', este 'if' se salta
-        // y no se aplica ningún filtro de sector (quedan todos).
-        /* --- DEBUG: Ver cuántos quedan después del filtro de sector ---
-        List<Activo> postSector = streamFiltrado.collect(Collectors.toList());
-        System.out.println("Activos restantes tras filtro Sector: " + postSector.size());
-        streamFiltrado = postSector.stream();*/ // Convertir de nuevo a stream
+
 
         // Filtro 2: ¿Filtramos por Tipo?
         // Solo filtramos si la opción "Otros" NO está presente.
@@ -301,21 +275,10 @@ private double calcularCotaSuperior(int idx, List<Activo> portafolioActual,
             );
         }
 
-        /* --- DEBUG: Ver cuántos quedan después del filtro de tipo ---
-        List<Activo> postTipo = streamFiltrado.collect(Collectors.toList());
-        System.out.println("Activos restantes tras filtro Tipo: " + postTipo.size());
-        streamFiltrado = postTipo.stream();*/
-        // Si prefiereOtrosTipo es 'true', este 'if' se salta.
-
         // Filtro 3: El presupuesto (este siempre se aplica)
         streamFiltrado = streamFiltrado.filter(a ->
                 a.getMontoMinimo() <= cliente.getMontoMaximo()
         );
-        /* --- DEBUG: Ver cuántos quedan después del filtro de presupuesto ---
-        List<Activo> postPresupuesto = streamFiltrado.collect(Collectors.toList());
-        System.out.println("Activos restantes tras filtro Presupuesto: " + postPresupuesto.size());
-        System.out.println("(Presupuesto Máx. Cliente: " + cliente.getMontoMaximo() + ")");
-        streamFiltrado = postPresupuesto.stream();*/
 
         // --- 4. Recolectar y Ordenar ---
 
@@ -351,10 +314,6 @@ private double calcularCotaSuperior(int idx, List<Activo> portafolioActual,
         return filtrados;
     }
 
-    /**
-     * Verifica si el gasto actual (parcial) viola los límites MÁXIMOS de diversificación.
-     * Esta función SÍ maneja la categoría "Otros".
-     */
     private boolean cumpleDiversificacionParcial(Map<String, Double> gastoSector, Map<String, Double> gastoTipo) {
 
         // --- 1. Revisión de Sectores ---
@@ -367,11 +326,6 @@ private double calcularCotaSuperior(int idx, List<Activo> portafolioActual,
                 break;
             }
         }
-
-        // --- NUEVO DEBUG ---
-        //System.out.println("  [DEBUG PODA 3 - Sector] Clave 'Otros' encontrada: " + claveOtrosSector);
-        //System.out.println("  [DEBUG PODA 3 - Sector] Gasto actual: " + gastoSector);
-        // --- FIN DEBUG ---
 
         for (Map.Entry<String, Double> entry : gastoSector.entrySet()) {
             String sector = entry.getKey();
@@ -388,9 +342,6 @@ private double calcularCotaSuperior(int idx, List<Activo> portafolioActual,
             }
         }
 
-        // --- NUEVO DEBUG ---
-        //System.out.println("  [DEBUG PODA 3 - Sector] Gasto 'Otros' acumulado: " + gastoOtrosSector);
-        // --- FIN DEBUG ---
 
         if (claveOtrosSector != null) {
             if (gastoOtrosSector > this.max_porSector.get(claveOtrosSector)) {
@@ -413,11 +364,6 @@ private double calcularCotaSuperior(int idx, List<Activo> portafolioActual,
             }
         }
 
-        // --- NUEVO DEBUG ---
-        //System.out.println("  [DEBUG PODA 3 - Tipo] Clave 'Otros' encontrada: " + claveOtrosTipo);
-        //System.out.println("  [DEBUG PODA 3 - Tipo] Gasto actual: " + gastoTipo);
-        // --- FIN DEBUG ---
-
         for (Map.Entry<String, Double> entry : gastoTipo.entrySet()) {
             String tipo = entry.getKey();
             double gasto = entry.getValue();
@@ -432,22 +378,14 @@ private double calcularCotaSuperior(int idx, List<Activo> portafolioActual,
             }
         }
 
-        // --- NUEVO DEBUG ---
-        //System.out.println("  [DEBUG PODA 3 - Tipo] Gasto 'Otros' acumulado: " + gastoOtrosTipo);
-        // --- FIN DEBUG ---
 
         if (claveOtrosTipo != null) {
             if (gastoOtrosTipo > this.max_porTipo.get(claveOtrosTipo)) {
-                //System.out.println("    -> FALLA: Límite de 'Otros' (Tipo) excedido.");
                 return false;
             }
         } else if (gastoOtrosTipo > 0) {
-            //System.out.println("    -> FALLA: Gasto 'Otros' (Tipo) no permitido.");
             return false;
         }
-
-        // Si pasó todo, imprime esto
-        //System.out.println("  [DEBUG PODA 3] -> PASA");
         return true;
     }
     private boolean esDiversificacionFinalValida(Map<String, Double> gastoSector, Map<String, Double> gastoTipo) {
@@ -457,9 +395,6 @@ private double calcularCotaSuperior(int idx, List<Activo> portafolioActual,
         }
 
         // 2. Chequear MÍNIMOS de gasto por Sector
-        // NOTA: Tu clase Cliente no define mínimos, así que tu pseudocódigo
-        // "si minUSD_porSector[s] existe..." siempre será falso.
-        // Lo programo por si decidís agregarlos después.
         for (Map.Entry<String, Double> entry : this.min_porSector.entrySet()) {
             String sector = entry.getKey();
             double minimoRequerido = entry.getValue();
@@ -488,114 +423,87 @@ private double calcularCotaSuperior(int idx, List<Activo> portafolioActual,
                            Map<String, Double> gastoSector, Map<String, Double> gastoTipo,
                            double presupuestoUsado) {
 
-        // --- 1. PODAS (PRUNING) ---
-        // (Las 4 podas que definiste)
+        // 1. PODAS
 
         // Poda 1: Presupuesto
-        // si presupuestoUsado > PRESUPUESTO_MAX → retornar
         if (presupuestoUsado > this.PRESUPUESTO_MAX) {;
             return; // Se pasó del presupuesto
 
         }
 
         // Poda 2: Riesgo
-        // si riesgo_total(S) > RIESGO_MAX → retornar
-        // Poda 2: Riesgo
-// si riesgo_total(S) > RIESGO_MAX → retornarDA ERROR
-
-        double riesgoActual = calcularRiesgoTotal(this.correlaciones.getMatrizCorrelaciones(), portafolioActual);
+        double riesgoActual = calcularRiesgoTotal(portafolioActual);
 
         if (riesgoActual > this.RIESGO_MAX) {
-            //System.out.println("DEBUG: el riesgo acutal es mayor al riesgo maximo");
             return; // Se pasó del riesgo
         }
 
 
         // Poda 3: Diversificación (Máximos de dinero)
-        // si !cumple_diversificacion_parcial(S, gastoSector, gastoTipo) → retornar
         if (!cumpleDiversificacionParcial(gastoSector, gastoTipo)) {
-            //System.out.println("DEBUG: no comple diversificaion actual");
             return; // Se pasó del % máximo en un sector o tipo
         }
 
-// Poda 4: Cotas (Branch and Bound)
+        // Poda 4: Cotas
         double cotaSuperior = calcularCotaSuperior(idx, portafolioActual, presupuestoUsado, portafolioActual.size());
-        double scoreParaVencer = this.RETORNO_MIN; // ¡Solo podemos usar el mínimo!, ya que lo que queremos es saber si es un portafolio valido
+        double scoreParaVencer = this.RETORNO_MIN; // Solo podemos usar el mínimo, ya que lo que queremos es saber si es un portafolio valido
         if (idx == 0 && portafolioActual.size() == 0) {
             System.out.println("DEBUG PODA 4 INICIAL: Cota Máx (Opt) = " + String.format("%.4f", cotaSuperior) + ". Minimo Requerido = " + String.format("%.4f", scoreParaVencer));
         }
 
         if (cotaSuperior < scoreParaVencer) {
-            //System.out.println("DEBUG: Poda 4 (Cota) cortada en índice " + idx + "...");
             return;
         }
 
-// --- 2. EVALUAR Y GUARDAR SOLUCIÓN CANDIDATA ---
-// (Esto se ejecuta si la rama NO fue podada)
+        // 2. EVALUAR Y GUARDAR SOLUCIÓN CANDIDATA
 
         int nroActivos = portafolioActual.size();
         double retornoActual = calcularRetornoTotal(portafolioActual);
 
-// si MIN_ACTIVOS ≤ |S| (ya sabemos que es ≤ MAX_ACTIVOS por la poda)
+
         if (nroActivos >= this.MIN_ACTIVOS) {
 
             if (retornoActual >= this.RETORNO_MIN &&
                     riesgoActual <= this.RIESGO_MAX &&
                     esDiversificacionFinalValida(gastoSector, gastoTipo)) {
 
-                //System.out.println("DEBUG: ¡SOLUCIÓN VÁLIDA ENCONTRADA! Ret: " + retornoActual + ", Riesgo: " + riesgoActual);
-
-                // 1. Crear el objeto Solucion
+                // 1. Creamos el objeto Solucion
                 double costoActual = calcularCostoTotal(portafolioActual);
                 Solucion nuevaSolucion = new Solucion(
-                        // ¡IMPORTANTE! Se crea una COPIA
                         new Portafolio(new ArrayList<>(portafolioActual), retornoActual, riesgoActual, costoActual),
                         retornoActual);
 
                 // 2. Añadir al Set.
-                // ¡'equals' y 'hashCode' se encargan de los duplicados!
                 this.solucionesUnicas.add(nuevaSolucion);
             }
         }
 
 
-            // --- 3. CORTE (CASO BASE) ---
-
-            // si idx == n o |S| == MAX_ACTIVOS → retornar
-            if (nroActivos == this.MAX_ACTIVOS || // Se llenó el portafolio (máx 6)
-                    idx == this.activosElegibles.size()) { // No hay más activos para decidir
+            // 3. CORTE (CASO BASE)
+            if (nroActivos == this.MAX_ACTIVOS || // Se llenó el portafolio (máximo 6)
+                    idx == this.activosElegibles.size()) {
                 return;
             }
 
-
-            // --- 4. RECURSIÓN (RAMIFICACIÓN) ---
-
-            // Obtenemos el activo a decidir
+            // 4. RECURSIÓN (ramificacion)
             Activo activoActual = this.activosElegibles.get(idx);
             double nuevoCosto = activoActual.getMontoMinimo();
             String sector = activoActual.getSector().toLowerCase();
             String tipo = activoActual.getTipo().toLowerCase();
 
-            // --- Decisión 1: INCLUIR el activo 'idx' ---
-
-            // a = Activos[idx]
-            // S.push(a)
+            // Decisión 1: INCLUIR el activo (idx)
             portafolioActual.add(activoActual);
-
-// ¡ARREGLO! Usa getOrDefault para evitar NullPointerException
+            
+            //Actualizamos los valores de los sectores
             gastoSector.put(sector, gastoSector.getOrDefault(sector, 0.0) + nuevoCosto);
             gastoTipo.put(tipo, gastoTipo.getOrDefault(tipo, 0.0) + nuevoCosto);
 
-            // Backtrack(idx+1, S, gastoSector, gastoTipo, presupuestoUsado + costo[a])
+            //Aca empieza la ramificacion
             backtrack(idx + 1, portafolioActual, gastoSector, gastoTipo, presupuestoUsado + nuevoCosto);
 
-            // --- Backtrack (Deshacer la decisión) ---
-
-            // S.pop()
+            // --- Backtrack (Deshacer la decisión)
             portafolioActual.remove(nroActivos); // Saca el último
 
-            // gastoSector[sector[a]] -= costo[a]
-// Lógica de "Undo" más segura
         double gastoActualSector = gastoSector.get(sector);
         if (gastoActualSector - nuevoCosto == 0.0) {
             gastoSector.remove(sector); // Elimina la clave si el gasto es 0
@@ -611,12 +519,9 @@ private double calcularCotaSuperior(int idx, List<Activo> portafolioActual,
         }
 
 
-            // --- Decisión 2: NO INCLUIR el activo 'idx' ---
+            // Decisión 2: NO INCLUIR el activo (idx)
 
-            // Backtrack(idx+1, S, gastoSector, gastoTipo, presupuestoUsado)
             backtrack(idx + 1, portafolioActual, gastoSector, gastoTipo, presupuestoUsado);
         }
     }
 
-
-// <<< BORRÉ EL MÉTODO 'backtrack' VACÍO QUE ESTABA DUPLICADO ACÁ >>>
