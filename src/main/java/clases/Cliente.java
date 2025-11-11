@@ -8,6 +8,11 @@ public class Cliente {
     private PerfilRiesgo perfil;
     private  Map<String, Double> preferenciasSector;
     private Map<String, Double> preferenciasTipoActivo;
+    private Map<String, Double> minimosSector;
+    private Map<String, Double> minimosTipoActivo;
+    public static Map<String, Double> objetivosPorSector;
+    public static Map<String, Double> objetivosPorTipo;
+    public double toleranciaPorcentual = 5.0;
 
     public Cliente(String nombre, double montoMaximo, int plazoInversion, PerfilRiesgo perfil, Map<String, Double> preferenciasSector, Map<String, Double> preferenciasTipoActivo) {
         this.nombre = nombre;
@@ -16,6 +21,8 @@ public class Cliente {
         this.perfil = perfil;
         this.preferenciasSector = preferenciasSector;
         this.preferenciasTipoActivo = preferenciasTipoActivo;
+        this.objetivosPorSector = preferenciasSector;
+        this.objetivosPorTipo   = preferenciasTipoActivo;
     }
 
     public String getNombre() {

@@ -33,8 +33,8 @@ public  class CargarDatos {
         double retornoEsperado = Double.parseDouble(atributos[1]);
         double riesgo = Double.parseDouble(atributos[2]);
         double montoMinimo = Double.parseDouble(atributos[3]);
-        String tipo=atributos[4];
-        String sector=atributos[5];
+        String tipo=atributos[4].toLowerCase();
+        String sector=atributos[5].toLowerCase();
         List<Double> porcentajes = new ArrayList<>();
         for (int i = 6; i < atributos.length; i++) {
             double porcentaje = Double.parseDouble(atributos[i]);

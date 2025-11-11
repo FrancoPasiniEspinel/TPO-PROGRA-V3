@@ -44,9 +44,8 @@ public class DatosCorrelaciones {
     public String toString() {
         return "DatosCorrelaciones{" +
                 "nombresActivos=" + nombresActivos +
-                ", matrizCorrelaciones=" + matrizCorrelaciones +
-                '}';
-    }
+                ", matrizCorrelaciones=" + matrizCorrelaciones + '}';
+}
 
 
 

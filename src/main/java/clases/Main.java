@@ -8,9 +8,8 @@ import java.util.stream.Collectors;
 
 public class Main {
 
-    // Definiciones estáticas para la validación de entrada
     private static final Set<String> SECTORES_VALIDOS = Set.of(
-            "tecnologia", "finanzas", "energia", "salud", "agro"
+            "tecnologia", "finanzas", "energia", "salud", "agro", "consumo"
     );
 
     private static final Set<String> TIPOS_ACTIVO_VALIDOS = Set.of(
