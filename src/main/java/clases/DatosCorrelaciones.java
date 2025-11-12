@@ -45,8 +45,5 @@ public class DatosCorrelaciones {
         return "DatosCorrelaciones{" +
                 "nombresActivos=" + nombresActivos +
                 ", matrizCorrelaciones=" + matrizCorrelaciones + '}';
-}
-
-
-
-}
+        }
+    }

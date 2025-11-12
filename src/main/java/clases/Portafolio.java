@@ -1,6 +1,9 @@
 package clases;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class Portafolio {
 
@@ -12,10 +15,6 @@ public class Portafolio {
     private double riesgoTotalAjustado;
     private double costoTotal;
 
-    /**
-     * Este es el constructor que faltaba.
-     * Recibe los datos de una solución encontrada y los guarda.
-     */
     public Portafolio(List<Activo> activosSeleccionados, double retornoTotalEstimado,
                       double riesgoTotalAjustado, double costoTotal) {
         this.activosSeleccionados = activosSeleccionados;
@@ -42,10 +41,43 @@ public class Portafolio {
         return costoTotal;
     }
 
-    /**
-     * Un método toString() es súper útil para imprimir el resultado
-     * de forma prolija en la consola.
-     */
+    public Map<String, Double> porcentajePorSector() {
+        double total = getCostoTotal();
+        Map<String, Double> acumulado = new HashMap<>();
+        for (Activo a : getActivosSeleccionados()) {
+            acumulado.merge(a.getSector(), a.getMontoMinimo(), Double::sum);
+        }
+        // pasar a %
+        Map<String, Double> pct = new HashMap<>();
+        if (total > 0) {
+            for (Map.Entry<String, Double> e : acumulado.entrySet()) {
+                pct.put(e.getKey(), (e.getValue() / total) * 100.0);
+            }
+        }
+        return pct;
+    }
+
+    public Map<String, Double> porcentajePorTipo() {
+        double total = getCostoTotal();
+        Map<String, Double> acumulado = new HashMap<>();
+        for (Activo a : getActivosSeleccionados()) {
+            acumulado.merge(a.getTipo(), a.getMontoMinimo(), Double::sum);
+        }
+        Map<String, Double> pct = new HashMap<>();
+        if (total > 0) {
+            for (Map.Entry<String, Double> e : acumulado.entrySet()) {
+                pct.put(e.getKey(), (e.getValue() / total) * 100.0);
+            }
+        }
+        return pct;
+    }
+    public static String formatearPorcentajes(Map<String, Double> mapa) {
+        return mapa.entrySet().stream()
+                .sorted((a,b) -> Double.compare(b.getValue(), a.getValue()))
+                .map(e -> String.format("%s: %.1f%%", e.getKey(), e.getValue()))
+                .collect(Collectors.joining(" | "));
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();

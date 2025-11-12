@@ -1,7 +1,5 @@
 package clases;
 
-import clases.*;
-
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -22,7 +20,6 @@ public class Main {
 
     public static void main(String[] args) {
 
-        //VARIABLES GLOBALES DE DATOS
         List<Activo> todosLosActivos = new ArrayList<>();
         DatosCorrelaciones correlaciones = null;
 
@@ -30,7 +27,6 @@ public class Main {
         try {
             todosLosActivos = CargarDatos.leerArchivoActivos();
             correlaciones = CargarDatos.leerArchivoCorrelaciones();
-
         } catch (IOException e) {
             System.err.println(" Error fatal al leer los archivos de datos. Asegúrate de que las rutas sean correctas y los archivos existan.");
             System.err.println("Detalle: " + e.getMessage());
@@ -39,8 +35,7 @@ public class Main {
 
         Scanner teclado = new Scanner(System.in);
 
-        //2. Ingreso de Datos del Cliente
-
+        // 2. Ingreso de datos del cliente
         System.out.print("------MENÚ PRINCIPAL------\n");
         System.out.print("Ingrese su nombre: ");
         String nombre = teclado.nextLine();
@@ -62,9 +57,7 @@ public class Main {
             try {
                 System.out.print("Ingrese el monto máximo a invertir: $");
                 montoMaximo = teclado.nextDouble();
-                if (montoMaximo <= 0) {
-                    System.out.println("El monto debe ser un número positivo.");
-                }
+                if (montoMaximo <= 0) System.out.println("El monto debe ser un número positivo.");
             } catch (InputMismatchException e) {
                 System.out.println("Entrada no válida. Por favor, ingrese un número.");
                 teclado.next();
@@ -72,15 +65,12 @@ public class Main {
         }
         teclado.nextLine();
 
-
         int plazoInversion = 0;
         while (plazoInversion <= 0) {
             try {
                 System.out.print("Ingrese el plazo de la inversión en meses: ");
                 plazoInversion = teclado.nextInt();
-                if (plazoInversion <= 0) {
-                    System.out.println("El plazo debe ser un número entero positivo.");
-                }
+                if (plazoInversion <= 0) System.out.println("El plazo debe ser un número entero positivo.");
             } catch (InputMismatchException e) {
                 System.out.println("Entrada no válida. Por favor, ingrese un número entero.");
                 teclado.next();
@@ -88,20 +78,17 @@ public class Main {
         }
         teclado.nextLine();
 
-
+        //  Preferencias de sectores y tipos (idéntico a tu versión)
         Map<String, Double> preferenciasSector = new HashMap<>();
         double porcentajeRestanteSector = 100.0;
-
         System.out.println("\n--- Preferencias por Sector ---");
         System.out.println("Sectores disponibles: " + SECTORES_VALIDOS);
-
         while (porcentajeRestanteSector > 0) {
             System.out.printf("\nPorcentaje restante a asignar a sectores: %.2f%%\n", porcentajeRestanteSector);
             System.out.print("Ingrese Sector (o 'OTROS' para restante, 'FIN' para terminar): ");
             String sector = teclado.nextLine().toLowerCase();
 
             if (sector.equals("fin")) break;
-
             if (sector.equals("otros")) {
                 if (porcentajeRestanteSector > 0) {
                     preferenciasSector.put("otros", porcentajeRestanteSector);
@@ -109,9 +96,8 @@ public class Main {
                 }
                 break;
             }
-
             if (!SECTORES_VALIDOS.contains(sector)) {
-                System.out.println("⚠️ Sector no válido. Elija de la lista.");
+                System.out.println(" Sector no válido. Elija de la lista.");
                 continue;
             }
 
@@ -128,18 +114,14 @@ public class Main {
                 preferenciasSector.put(sector, preferenciasSector.getOrDefault(sector, 0.0) + porcentaje);
                 porcentajeRestanteSector -= porcentaje;
                 System.out.printf("Asignado. (Total %s: %.2f%%).\n", sector, preferenciasSector.get(sector));
-
             } catch (InputMismatchException e) {
                 System.out.println(" Entrada no válida. Ingrese un número.");
                 teclado.nextLine();
             }
         }
-        if (porcentajeRestanteSector <= 0) System.out.println(" 100% sectorial asignado.");
-
 
         Map<String, Double> preferenciasTipoActivo = new HashMap<>();
         double porcentajeRestanteTipo = 100.0;
-
         System.out.println("\n--- Preferencias por Tipo de Activo ---");
         System.out.println("Tipos de activo disponibles: " + TIPOS_ACTIVO_VALIDOS);
 
@@ -149,7 +131,6 @@ public class Main {
             String tipoActivo = teclado.nextLine().toLowerCase();
 
             if (tipoActivo.equals("fin")) break;
-
             if (tipoActivo.equals("otros")) {
                 if (porcentajeRestanteTipo > 0) {
                     preferenciasTipoActivo.put("otros", porcentajeRestanteTipo);
@@ -157,7 +138,6 @@ public class Main {
                 }
                 break;
             }
-
             if (!TIPOS_ACTIVO_VALIDOS.contains(tipoActivo)) {
                 System.out.println(" Tipo de activo no válido. Elija de la lista.");
                 continue;
@@ -176,65 +156,49 @@ public class Main {
                 preferenciasTipoActivo.put(tipoActivo, preferenciasTipoActivo.getOrDefault(tipoActivo, 0.0) + porcentaje);
                 porcentajeRestanteTipo -= porcentaje;
                 System.out.printf("Asignado. (Total %s: %.2f%%).\n", tipoActivo, preferenciasTipoActivo.get(tipoActivo));
-
             } catch (InputMismatchException e) {
                 System.out.println(" Entrada no válida. Ingrese un número.");
                 teclado.nextLine();
             }
         }
 
-        if (porcentajeRestanteTipo <= 0) System.out.println("100% tipos asignado.");
-
-
-        // 3. Creación del Cliente y Llamada al Backtracking
-
+        // 3. Crear cliente y ejecutar algoritmo
         Cliente cliente = new Cliente(nombre, montoMaximo, plazoInversion, perfilSeleccionado, preferenciasSector, preferenciasTipoActivo);
         System.out.println("\n--- Cliente Creado Exitosamente ---");
 
-
-        // 4. EJECUCIÓN DEL ALGORITMO
-
-
         System.out.println("\n--- Calculando Portafolio Óptimo (Backtracking) ---");
         try {
-            // instanciamos
             MetodosBackTracking optimizador = new MetodosBackTracking();
+            List<Portafolio> portafoliosFinales = optimizador.encontrarPortafolioOptimo(cliente, todosLosActivos, correlaciones);
 
-            // Llamar a la función con los datos reales
-            List<Portafolio> portafoliosFinales = optimizador.encontrarPortafolioOptimo(
-                    cliente,
-                    todosLosActivos,
-                    correlaciones
-            );
-
-            // 5. Mostrar el resultado
+            // 5. Mostrar resultado
             System.out.println("\n--- RECOMENDACIONES DE PORTAFOLIO (TOP 3) ---");
             if (portafoliosFinales.isEmpty()) {
                 System.out.println("No se encontró ningún portafolio que cumpla con todas las restricciones del cliente.");
             } else {
-                for (int i=0; i<portafoliosFinales.size(); i++) {
-                    if (i==0){
-                        System.out.println("----------------------------------------");
+                for (int i = 0; i < portafoliosFinales.size(); i++) {
+                    Portafolio p = portafoliosFinales.get(i);
+                    System.out.println("----------------------------------------");
+                    if (i == 0)
                         System.out.println("PORTAFOLIO GANADOR!");
-                        System.out.printf("  Retorno Esperado: %.4f%%\n", portafoliosFinales.get(i).getRetornoTotalEstimado());
-                        System.out.printf("  Riesgo Total (Desv. Est.): %.4f%%\n", portafoliosFinales.get(i).getRiesgoTotalAjustado());
-                        System.out.printf("  Costo de Inversión: $%.2f\n", portafoliosFinales.get(i).getCostoTotal());
-                        String activosNombres  = portafoliosFinales.get(i).getActivosSeleccionados().stream()
-                                .map(Activo::getNombre)
-                                .collect(Collectors.joining(", "));
-                        System.out.println("  Activos Seleccionados: " + activosNombres);
-
-                    }else {
-                        System.out.println("----------------------------------------");
+                    else
                         System.out.println("Alternativa #" + i);
-                        System.out.printf("  Retorno Esperado: %.4f%%\n", portafoliosFinales.get(i).getRetornoTotalEstimado());
-                        System.out.printf("  Riesgo Total (Desv. Est.): %.4f%%\n", portafoliosFinales.get(i).getRiesgoTotalAjustado());
-                        System.out.printf("  Costo de Inversión: $%.2f\n", portafoliosFinales.get(i).getCostoTotal());
-                        String activosNombres = portafoliosFinales.get(i).getActivosSeleccionados().stream()
-                                .map(Activo::getNombre)
-                                .collect(Collectors.joining(", "));
-                        System.out.println("  Activos Seleccionados: " + activosNombres);
-                    }
+
+                    System.out.printf("  Retorno Esperado: %.4f%%\n", p.getRetornoTotalEstimado());
+                    System.out.printf("  Riesgo Total (Desv. Est.): %.4f%%\n", p.getRiesgoTotalAjustado());
+                    System.out.printf("  Costo de Inversión: $%.2f\n", p.getCostoTotal());
+
+                    String activosNombres = p.getActivosSeleccionados().stream()
+                            .map(Activo::getNombre)
+                            .collect(Collectors.joining(", "));
+                    System.out.println("  Activos Seleccionados: " + activosNombres);
+
+                    //porcentajes por sector y tipo
+                    Map<String, Double> pctSector = p.porcentajePorSector();
+                    Map<String, Double> pctTipo = p.porcentajePorTipo();
+
+                    System.out.println("  Distribución por Sector: " + Portafolio.formatearPorcentajes(pctSector));
+                    System.out.println("  Distribución por Tipo:   " + Portafolio.formatearPorcentajes(pctTipo));
                 }
                 System.out.println("----------------------------------------");
             }
