@@ -12,14 +12,12 @@ public class MetodosBackTracking {
     private double PRESUPUESTO_MAX;
     private Map<String, Double> max_porSector;
     private Map<String, Double> max_porTipo;
-    private Map<String, Double> min_porSector;
-    private Map<String, Double> min_porTipo;
     private Map<String, Double> preferenciasSectorCliente;
     private Map<String, Double> preferenciasTipoActivoCliente;
     private final double MARGEN_DIVERSIFICACION_PORCENTUAL = 5.0;
     private boolean prefiereOtrosTipoCliente;
     private boolean prefiereOtrosSectorCliente;
-    private final int MIN_ACTIVOS = 3;//cambiado
+    private final int MIN_ACTIVOS = 3;
     private final int MAX_ACTIVOS = 6;
     private final int CANTIDAD_ALTERNATIVAS = 3;
     private Set<Solucion> solucionesUnicas;
@@ -435,25 +433,15 @@ public class MetodosBackTracking {
             return; // Se pasó del presupuesto
         }
 
-        // Poda 2: Riesgo
-
-        /*if (riesgoActual > this.RIESGO_MAX) {
-            return;
-        }*/
-
-
-        // Poda 3: Diversificacion
+        // Poda 2: Diversificacion
 
         if (!cumpleDiversificacionParcial(gastoSector, gastoTipo)) {
             return;
         }
 
-        // Poda 4: Cotas
+        // Poda 3: Cotas
         double cotaSuperior = calcularCotaSuperior(idx, portafolioActual, presupuestoUsado);
         double scoreParaVencer = this.RETORNO_MIN;
-
-        if (idx == 0 && portafolioActual.size() == 0) {
-        }
 
         if (cotaSuperior < scoreParaVencer) {
             return;
@@ -491,10 +479,9 @@ public class MetodosBackTracking {
 
         // 4. RECURSIÓN (ramificacion)
 
-        // Decisión 2: NO INCLUIR el activo (idx)
+        // Decisión 1: NO INCLUIR el activo (idx)
         backtrack(idx + 1, portafolioActual, gastoSector, gastoTipo, presupuestoUsado);
 
-        // Decisión 1: INCLUIR el activo (idx)
         Activo activoActual = this.activosElegibles.get(idx);
         double nuevoCosto = activoActual.getMontoMinimo();
 
@@ -508,7 +495,7 @@ public class MetodosBackTracking {
             gastoSector.put(sector, gastoSector.getOrDefault(sector, 0.0) + nuevoCosto);
             gastoTipo.put(tipo, gastoTipo.getOrDefault(tipo, 0.0) + nuevoCosto);
 
-
+            // Decisión 2: INCLUIR el activo (idx)
             backtrack(idx, portafolioActual, gastoSector, gastoTipo, presupuestoUsado + nuevoCosto);
 
             portafolioActual.remove(nroActivos);
